@@ -26,6 +26,12 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var isReceiving = false
     @Published var transferProgress: Double = 0
     
+    // Invitation Handling
+    @Published var showingInvitationAlert = false
+    @Published var invitationSenderName = ""
+    private var invitationHandler: ((Bool, MCSession?) -> Void)?
+
+    
     override init() {
         // Sanitize device name (remove special characters that can break discovery)
         let rawName = PlatformUtils.deviceName
@@ -66,7 +72,21 @@ class MultipeerManager: NSObject, ObservableObject {
             }
         }
     }
+    
+    // MARK: - Invitation Response
+    func acceptInvitation() {
+        invitationHandler?(true, session)
+        invitationHandler = nil
+        showingInvitationAlert = false
+    }
+    
+    func declineInvitation() {
+        invitationHandler?(false, nil)
+        invitationHandler = nil
+        showingInvitationAlert = false
+    }
 }
+
 
 // MARK: - MCSessionDelegate
 extension MultipeerManager: MCSessionDelegate {
@@ -130,7 +150,9 @@ extension MultipeerManager: MCSessionDelegate {
                     try FileManager.default.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
                 }
                 
-                let destinationURL = musicDirectory.appendingPathComponent(resourceName)
+                // Sanitize the resource name to prevent path traversal attacks
+                let sanitizedName = (resourceName as NSString).lastPathComponent
+                let destinationURL = musicDirectory.appendingPathComponent(sanitizedName)
                 
                 // Remove existing file if needed
                 if FileManager.default.fileExists(atPath: destinationURL.path) {
@@ -141,7 +163,7 @@ extension MultipeerManager: MCSessionDelegate {
                 print("Moved file to: \(destinationURL.path)")
                 
                 self.receivedSongURL = destinationURL
-                self.lastReceivedSongName = resourceName.replacingOccurrences(of: ".mp3", with: "", options: .caseInsensitive)
+                self.lastReceivedSongName = sanitizedName.replacingOccurrences(of: ".mp3", with: "", options: .caseInsensitive)
                 self.showReceivedNotification = true
                 
                 // Refresh library using the new async scan logic
@@ -157,10 +179,14 @@ extension MultipeerManager: MCSessionDelegate {
 // MARK: - MCNearbyServiceAdvertiserDelegate
 extension MultipeerManager: MCNearbyServiceAdvertiserDelegate {
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        // Always accept invitations for now
-        invitationHandler(true, session)
+        DispatchQueue.main.async {
+            self.invitationSenderName = peerID.displayName
+            self.invitationHandler = invitationHandler
+            self.showingInvitationAlert = true
+        }
     }
 }
+
 
 // MARK: - MCNearbyServiceBrowserDelegate
 extension MultipeerManager: MCNearbyServiceBrowserDelegate {

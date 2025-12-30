@@ -66,6 +66,16 @@ struct ContentView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: player.currentSong != nil)
         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: multipeer.showReceivedNotification)
         .preferredColorScheme(darkMode ? .dark : .light)
+        .alert("Connect Request", isPresented: $multipeer.showingInvitationAlert) {
+            Button("Decline", role: .cancel) {
+                multipeer.declineInvitation()
+            }
+            Button("Accept") {
+                multipeer.acceptInvitation()
+            }
+        } message: {
+            Text("'\(multipeer.invitationSenderName)' wants to connect with you to share music.")
+        }
     }
     
     private var receivedNotificationView: some View {
