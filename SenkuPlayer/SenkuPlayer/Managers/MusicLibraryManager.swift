@@ -354,7 +354,12 @@ class MusicLibraryManager: ObservableObject {
             let mp3Files = files.filter { $0.pathExtension.lowercased() == "mp3" }
             
             // Use provided list or current library
-            let referenceSongs = existingSongs ?? (await MainActor.run { self.songs })
+            let referenceSongs: [Song]
+            if let existing = existingSongs {
+                referenceSongs = existing
+            } else {
+                referenceSongs = await MainActor.run { self.songs }
+            }
             
             var newSongs: [Song] = []
             for fileURL in mp3Files {
