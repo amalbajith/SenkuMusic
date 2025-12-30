@@ -29,6 +29,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     private var timeObserver: Any?
     private var originalQueue: [Song] = []
     private var cancellables = Set<AnyCancellable>()
+    private var isSeeking = false
     
     enum RepeatMode {
         case off, one, all
@@ -201,11 +202,18 @@ class AudioPlayerManager: NSObject, ObservableObject {
         // Update duration
         duration = song.duration
         
+        // Reset seeking state
+        isSeeking = false
+        
         // Add time observer
-        let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        let interval = CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            self?.currentTime = time.seconds
+            guard let self = self, !self.isSeeking else { return }
+            self.currentTime = time.seconds
         }
+        
+        // Reset current time
+        currentTime = 0
         
         // Update Now Playing Info
         updateNowPlayingInfo()
@@ -261,9 +269,17 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
     
     func seek(to time: TimeInterval) {
+        isSeeking = true
+        
+        // Optimistically update current time for UI responsiveness
+        currentTime = time
+        
         let cmTime = CMTime(seconds: time, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         player?.seek(to: cmTime) { [weak self] _ in
-            self?.updateNowPlayingInfo()
+            DispatchQueue.main.async {
+                self?.isSeeking = false
+                self?.updateNowPlayingInfo()
+            }
         }
     }
     

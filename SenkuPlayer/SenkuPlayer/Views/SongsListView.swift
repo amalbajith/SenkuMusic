@@ -14,6 +14,7 @@ struct SongsListView: View {
     @State private var selectedSongs: Set<UUID> = []
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
+    @State private var songToShare: Song?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +35,22 @@ struct SongsListView: View {
                                 toggleSelection(song.id)
                             } else {
                                 playSong(song)
+                            }
+                        }
+                        .contextMenu {
+                            Button {
+                                songToShare = song
+                            } label: {
+                                Label("Share Nearby", systemImage: "wave.3.backward.circle")
+                            }
+                            
+                            if !isSelectionMode {
+                                Button {
+                                    toggleSelection(song.id)
+                                    isSelectionMode = true
+                                } label: {
+                                    Label("Select", systemImage: "checkmark.circle")
+                                }
                             }
                         }
                     }
@@ -59,6 +76,9 @@ struct SongsListView: View {
         }
         .sheet(isPresented: $showingPlaylistPicker) {
             PlaylistPickerView(songIDs: Array(selectedSongs))
+        }
+        .sheet(item: $songToShare) { song in
+            NearbyShareView(song: song)
         }
     }
     

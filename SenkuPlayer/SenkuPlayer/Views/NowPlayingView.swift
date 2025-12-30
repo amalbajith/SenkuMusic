@@ -139,7 +139,7 @@ struct NowPlayingView: View {
         VStack(spacing: 8) {
             Slider(
                 value: Binding(
-                    get: { isDraggingSlider ? draggedTime : player.currentTime },
+                    get: { draggedTime },
                     set: { newValue in
                         draggedTime = newValue
                         if !isDraggingSlider {
@@ -156,6 +156,11 @@ struct NowPlayingView: View {
                 }
             )
             .tint(.blue)
+            .onChange(of: player.currentTime) { newValue in
+                if !isDraggingSlider {
+                    draggedTime = newValue
+                }
+            }
             
             HStack {
                 Text(formatTime(isDraggingSlider ? draggedTime : player.currentTime))
