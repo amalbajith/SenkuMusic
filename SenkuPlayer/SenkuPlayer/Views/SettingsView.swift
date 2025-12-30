@@ -17,8 +17,13 @@ struct SettingsView: View {
     @State private var showingClearLibraryAlert = false
     @AppStorage("darkMode") private var darkMode = false
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
+    
+    // Developer Settings
+    @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
+    @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
+    @AppStorage("devEnableDebugLogging") private var devEnableDebugLogging = false
+    @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
 
-    @Environment(\.colorScheme) private var colorScheme
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
     
@@ -128,6 +133,30 @@ struct SettingsView: View {
                                     .font(.caption)
                             }
                         }
+                        
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        Text("DEBUG FEATURES")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.bold)
+                        
+                        Toggle("Show File Extensions", isOn: $devShowFileExtensions)
+                        Toggle("Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
+                        Toggle("Enable Console Logging", isOn: $devEnableDebugLogging)
+                        Toggle("Force Vibrant UI", isOn: $devForceVibrantBackground)
+                        
+                        Button(role: .destructive) {
+                            // Reset all dev settings
+                            devShowFileExtensions = false
+                            devDisableArtworkAnimation = false
+                            devEnableDebugLogging = false
+                            devForceVibrantBackground = false
+                        } label: {
+                            Text("Reset Dev Settings")
+                        }
+
                     } header: {
                         Text("Developer")
                     }

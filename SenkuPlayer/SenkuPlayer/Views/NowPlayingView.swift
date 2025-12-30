@@ -18,6 +18,11 @@ struct NowPlayingView: View {
     @State private var isDraggingSlider = false
     @State private var draggedTime: TimeInterval = 0
     @StateObject private var favoritesManager = FavoritesManager.shared
+    
+    // Developer Settings
+    @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
+    @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
+
 
     var body: some View {
         ZStack {
@@ -70,12 +75,13 @@ struct NowPlayingView: View {
         return LinearGradient(
             colors: [
                 bgColor,
-                artworkDominantColor.opacity(0.3),
+                (devForceVibrantBackground ? (player.isPlaying ? Color.blue : Color.purple) : artworkDominantColor).opacity(0.3),
                 bgColor
             ],
             startPoint: .top,
             endPoint: .bottom
         )
+
     }
     
     // MARK: - Header
@@ -127,13 +133,18 @@ struct NowPlayingView: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size, height: size)
                     .cornerRadius(20)
+                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.9))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
                     .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             } else {
                 let size = PlatformUtils.screenWidth - 80
                 RoundedRectangle(cornerRadius: 20)
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            colors: [
+                                devForceVibrantBackground ? Color.blue : Color.blue.opacity(0.6),
+                                devForceVibrantBackground ? Color.purple : Color.purple.opacity(0.6)
+                            ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -144,8 +155,11 @@ struct NowPlayingView: View {
                             .font(.system(size: 80))
                             .foregroundColor(.white.opacity(0.8))
                     }
+                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.9))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
                     .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             }
+
         }
     }
     

@@ -19,6 +19,17 @@ class MusicLibraryManager: ObservableObject {
     @Published var isScanning = false
     @Published var scanProgress: Double = 0
     
+    private var isDebugLoggingEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "devEnableDebugLogging")
+    }
+    
+    private func debugLog(_ message: String) {
+        if isDebugLoggingEnabled {
+            print("🔍 [DEBUG] \(message)")
+        }
+    }
+
+    
     // MARK: - Private Properties
     private let fileManager = FileManager.default
     private let userDefaults = UserDefaults.standard
@@ -57,10 +68,13 @@ class MusicLibraryManager: ObservableObject {
             ) {
                 let urls = enumerator.allObjects as? [URL] ?? []
                 let mp3URLs = urls.filter { $0.pathExtension.lowercased() == "mp3" }
+                self.debugLog("Found \(mp3URLs.count) MP3 files in \(url.lastPathComponent)")
                 let total = Double(mp3URLs.count)
                 
                 for (index, fileURL) in mp3URLs.enumerated() {
+                    self.debugLog("Scanning metadata for: \(fileURL.lastPathComponent)")
                     if let song = await Song.fromURL(fileURL) {
+
                         foundSongs.append(song)
                     }
                     

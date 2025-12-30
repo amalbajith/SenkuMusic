@@ -176,6 +176,8 @@ struct SongRow: View {
     let isSelected: Bool
     let isSelectionMode: Bool
     
+    @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
+    
     var body: some View {
         HStack(spacing: 12) {
             if isSelectionMode {
@@ -204,7 +206,7 @@ struct SongRow: View {
             
             // Song Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(song.title)
+                Text(devShowFileExtensions ? song.url.lastPathComponent : song.title)
                     .font(.body)
                     .foregroundColor(isPlaying ? .blue : .primary)
                     .lineLimit(1)
@@ -214,6 +216,7 @@ struct SongRow: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
+
             
             Spacer()
             
