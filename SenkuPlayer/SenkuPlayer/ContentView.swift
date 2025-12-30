@@ -11,6 +11,8 @@ struct ContentView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @StateObject private var multipeer = MultipeerManager.shared
     @AppStorage("darkMode") private var darkMode = false
+    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
+
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -75,6 +77,11 @@ struct ContentView: View {
             }
         } message: {
             Text("'\(multipeer.invitationSenderName)' wants to connect with you to share music.")
+        }
+        .onAppear {
+            #if os(iOS)
+            UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
+            #endif
         }
     }
     

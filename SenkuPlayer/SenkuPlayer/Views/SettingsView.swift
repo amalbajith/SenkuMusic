@@ -16,6 +16,8 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @State private var showingClearLibraryAlert = false
     @AppStorage("darkMode") private var darkMode = false
+    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
+
     @Environment(\.colorScheme) private var colorScheme
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
@@ -37,6 +39,22 @@ struct SettingsView: View {
                             Image(systemName: darkMode ? "moon.fill" : "sun.max.fill")
                                 .foregroundColor(darkMode ? .blue : .orange)
                             Text("Dark Mode")
+                        }
+                    }
+                    
+                    Toggle(isOn: Binding(
+                        get: { keepScreenAwake },
+                        set: { newValue in
+                            keepScreenAwake = newValue
+                            #if os(iOS)
+                            UIApplication.shared.isIdleTimerDisabled = newValue
+                            #endif
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: keepScreenAwake ? "eye.fill" : "eye.slash.fill")
+                                .foregroundColor(.blue)
+                            Text("Keep Screen Awake")
                         }
                     }
                 } header: {
