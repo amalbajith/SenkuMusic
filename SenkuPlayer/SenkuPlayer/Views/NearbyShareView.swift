@@ -144,11 +144,7 @@ struct NearbyShareView: View {
                 }
             }
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Toggle("Visible", isOn: $multipeer.isDiscoverable)
-                    .toggleStyle(SwitchToggleStyle(tint: .blue))
-                    .labelsHidden()
-            }
+
         }
         .onAppear {
             multipeer.startBrowsing()

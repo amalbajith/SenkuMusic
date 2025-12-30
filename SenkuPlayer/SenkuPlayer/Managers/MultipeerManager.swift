@@ -40,25 +40,13 @@ class MultipeerManager: NSObject, ObservableObject {
     }
     
     func startBrowsing() {
-        if isDiscoverable {
-            serviceBrowser.startBrowsingForPeers()
-            serviceAdvertiser.startAdvertisingPeer()
-        }
+        serviceBrowser.startBrowsingForPeers()
+        serviceAdvertiser.startAdvertisingPeer()
     }
     
     func stopBrowsing() {
         serviceBrowser.stopBrowsingForPeers()
         serviceAdvertiser.stopAdvertisingPeer()
-    }
-
-    @Published var isDiscoverable: Bool = true {
-        didSet {
-            if isDiscoverable {
-                startBrowsing()
-            } else {
-                stopBrowsing()
-            }
-        }
     }
     
     func invite(peer: MCPeerID) {
