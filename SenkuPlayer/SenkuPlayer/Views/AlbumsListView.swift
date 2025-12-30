@@ -45,8 +45,8 @@ struct AlbumGridItem: View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
             if let artworkData = album.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(1, contentMode: .fill)
                     .cornerRadius(12)
@@ -94,8 +94,8 @@ struct AlbumDetailView: View {
                 VStack(spacing: 16) {
                     // Artwork
                     if let artworkData = album.artworkData,
-                       let uiImage = UIImage(data: artworkData) {
-                        Image(uiImage: uiImage)
+                       let platformImage = PlatformImage.fromData(artworkData) {
+                        Image(platformImage: platformImage)
                             .resizable()
                             .aspectRatio(1, contentMode: .fill)
                             .frame(width: 200, height: 200)
@@ -178,7 +178,9 @@ struct AlbumDetailView: View {
                 .padding(.horizontal)
             }
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 }
 

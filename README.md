@@ -1,34 +1,40 @@
 # SenkuPlayer - Local Music Player
 
-A pixel-perfect Apple Music clone that plays local MP3 files with full background playback support and Dynamic Island integration.
+A pixel-perfect Apple Music clone that plays local music files with full background playback support, multi-device sharing, and cross-platform compatibility (iOS & macOS).
 
-## Features
+## ✨ Features
 
-### ✨ Core Features
-- **Local MP3 Playback**: Play MP3 files from your device
-- **Background Audio**: Continue playing music when app is in background or device is locked
-- **ID3 Metadata Reading**: Automatic extraction of song title, artist, album, artwork, and more
-- **Library Management**: Organize music by songs, albums, artists, and playlists
-- **Search**: Search across all your music
-- **Playlist Management**: Create, edit, and delete custom playlists
+### 🍏 Cross-Platform Compatibility
+- **Universal App**: Run natively on both **iOS** and **macOS** with a single codebase.
+- **Platform-Aware UI**: Automatically adjusts layout and controls for iPad, iPhone, and Mac.
+- **macOS Optimization**: Supports window resizing, native menus, and Mac-specific file navigation.
 
-### 🎨 UI/UX
-- **Apple Music-Inspired Design**: Pixel-perfect recreation of Apple Music's interface
-- **Now Playing Screen**: Full-screen player with album artwork and controls
-- **Mini Player**: Bottom-anchored mini player for quick access
-- **Library Views**: Segmented control for Playlists, Artists, Albums, and Songs
-- **Album Art Visualization**: Beautiful artwork display with dominant color extraction
-- **Smooth Animations**: Spring-based animations throughout
+### 📡 Nearby Share (AirDrop-style)
+- **Device-to-Device Sharing**: Send songs over the local network using Multipeer Connectivity.
+- **Cross-Device Support**: Share seamlessly between iPhone to iPhone, Mac to iPhone, or iPhone to Mac.
+- **Bulk Sharing**: Select multiple songs and send them all at once.
+- **Instant Importing**: Received songs are automatically added to the library and ready to play.
 
-### 🎵 Playback Features
-- **Playback Controls**: Play, pause, next, previous
-- **Shuffle & Repeat**: Full shuffle and repeat modes (off, all, one)
-- **Progress Slider**: Seek to any position in the track
-- **Queue Management**: View and manage playback queue
-- **Remote Controls**: Control playback from lock screen and Control Center
-- **Now Playing Info**: Display current track info on lock screen
+### ❤️ Favorites & Playlists
+- **Persistent Favorites**: Mark songs as favorites and access them instantly.
+- **Custom Playlists**: Create, rename, and organize your music into collections.
+- **Bulk Actions**: Add multiple songs to playlists or favorites simultaneously.
 
-## Project Structure
+### 🎨 Premium UI/UX
+- **Apple Music-Inspired Design**: Pixel-perfect recreation of the premium Apple Music interface.
+- **Adaptive Backgrounds**: Dynamic backgrounds that extract and match the dominant color of the album artwork.
+- **Interactive Mini Player**: Floating mini player that stays accessible across the entire app.
+- **Dark Mode Support**: Pure black theme for OLED screens.
+- **Fluid Animations**: High-performance spring animations and transitions.
+
+### 🎵 Core Playback
+- **Local File Support**: Import and play MP3 files from any folder.
+- **Background Audio**: Keep the music going when the app is in the background or the screen is locked.
+- **Metadata Extraction**: High-fidelity extraction of Title, Artist, Album, and embedded Artwork.
+- **Shuffle & Repeat**: Smart playback modes (Off, All, One).
+- **Control Center Integration**: Full support for lock screen controls, headphones, and system playback commands.
+
+## 📁 Project Structure
 
 ```
 SenkuPlayer/
@@ -39,197 +45,63 @@ SenkuPlayer/
 │   └── Playlist.swift          # User-created playlist model
 ├── Managers/
 │   ├── AudioPlayerManager.swift    # AVFoundation-based audio engine
-│   └── MusicLibraryManager.swift   # Library scanning and organization
+│   ├── MusicLibraryManager.swift   # Library scanning and organization
+│   ├── FavoritesManager.swift      # Persistent favoriting system
+│   └── MultipeerManager.swift      # Nearby Share connectivity engine
+├── Utilities/
+│   └── PlatformExtensions.swift    # iOS/macOS compatibility layer
 ├── Views/
-│   ├── ContentView.swift          # Main app container
-│   ├── LibraryView.swift          # Library with segmented control
-│   ├── SongsListView.swift        # Songs list with selection mode
+│   ├── LibraryView.swift          # Main library interface
+│   ├── SongsListView.swift        # Songs list with bulk selection & swipe actions
 │   ├── AlbumsListView.swift       # Albums grid and detail views
 │   ├── ArtistsListView.swift      # Artists list and detail views
 │   ├── PlaylistsListView.swift    # Playlists management
-│   ├── NowPlayingView.swift       # Full-screen player
-│   ├── MiniPlayerView.swift       # Bottom mini player
-│   ├── SettingsView.swift         # App settings
-│   ├── DocumentPicker.swift       # Folder selection
-│   └── PlaylistPickerView.swift   # Add to playlist sheet
-└── SenkuPlayerApp.swift           # App entry point
+│   ├── NowPlayingView.swift       # Full-screen immersive player
+│   ├── MiniPlayerView.swift       # Floating mini player
+│   ├── NearbyShareView.swift      # Device discovery and transfer UI
+│   ├── SettingsView.swift         # App settings and themes
+│   └── DocumentPicker.swift       # Native file/folder selection (iOS/macOS)
+└── SenkuPlayerApp.swift           # App entry point with audio session config
 ```
 
-## Setup Instructions
+## 🛠 Setup & Requirements
 
-### 1. Project Configuration in Xcode
-
-#### Enable Background Audio
-1. Open the project in Xcode
-2. Select the **SenkuPlayer** target
-3. Go to **Signing & Capabilities** tab
-4. Click **+ Capability**
-5. Add **Background Modes**
-6. Check **Audio, AirPlay, and Picture in Picture**
-
-#### Configure File Access Permissions
-1. Select the **SenkuPlayer** target
-2. Go to **Info** tab
-3. Add the following keys:
-   - **Privacy - Media Library Usage Description**: "We need access to your music library to play your songs"
-   - **Supports opening documents in place**: YES
-   - **Application supports iTunes file sharing**: YES
-
-#### Configure Info.plist
-Add these entries to your Info.plist:
-
-```xml
-<key>UIBackgroundModes</key>
-<array>
-    <string>audio</string>
-</array>
-<key>NSAppleMusicUsageDescription</key>
-<string>We need access to your music library to play your songs</string>
-<key>UISupportsDocumentBrowser</key>
-<true/>
-<key>LSSupportsOpeningDocumentsInPlace</key>
-<true/>
-<key>UIFileSharingEnabled</key>
-<true/>
-```
-
-### 2. Build and Run
-
-1. Select your target device (iOS 17.0+)
-2. Build and run the project (⌘R)
-
-### 3. Adding Music
-
-#### Method 1: Document Picker
-1. Tap the folder icon in the navigation bar
-2. Select a folder containing MP3 files
-3. The app will scan and import all MP3 files
-
-#### Method 2: iTunes File Sharing
-1. Connect your device to your Mac
-2. Open Finder
-3. Select your device
-4. Go to Files tab
-5. Drag MP3 files into the SenkuPlayer folder
-6. Use the folder picker in the app to scan
-
-## Usage Guide
-
-### Playing Music
-1. **Browse Library**: Use the segmented control to switch between Playlists, Artists, Albums, and Songs
-2. **Tap to Play**: Tap any song to start playback
-3. **Mini Player**: Control playback from the bottom mini player
-4. **Full Player**: Tap the mini player to open the full Now Playing screen
-
-### Creating Playlists
-1. Go to **Playlists** tab
-2. Tap the **+** button
-3. Enter a playlist name
-4. Go to **Songs** tab
-5. Tap **Select**
-6. Select songs
-7. Tap **Add to Playlist**
-8. Choose your playlist
-
-### Playback Controls
-- **Play/Pause**: Tap the play/pause button
-- **Next/Previous**: Use the skip buttons
-- **Shuffle**: Tap the shuffle button (blue when active)
-- **Repeat**: Tap the repeat button (cycles through off → all → one)
-- **Seek**: Drag the progress slider
-
-### Background Playback
-- Music continues playing when:
-  - App is in background
-  - Device is locked
-  - Switching to other apps
-- Control playback from:
-  - Lock screen
-  - Control Center
-  - AirPods/headphones
-
-## Technical Details
-
-### Audio Engine
-- **Framework**: AVFoundation
-- **Audio Session**: `.playback` category for background support
-- **Remote Commands**: Full integration with MPRemoteCommandCenter
-- **Now Playing Info**: MPNowPlayingInfoCenter integration
-
-### Metadata Extraction
-- **ID3 Tags**: Automatic extraction using AVAsset metadata
-- **Supported Fields**:
-  - Title, Artist, Album, Album Artist
-  - Genre, Year, Track Number, Disc Number
-  - Artwork (embedded images)
-
-### Data Persistence
-- **Storage**: UserDefaults for library and playlists
-- **Format**: JSON encoding/decoding
-- **File Verification**: Checks file existence on load
-
-### Performance
-- **Async Scanning**: Background thread for file scanning
-- **Progress Tracking**: Real-time scan progress updates
-- **Lazy Loading**: Efficient list rendering with LazyVGrid/List
-
-## Requirements
-
+### Technical Requirements
 - **iOS**: 17.0 or later
+- **macOS**: 14.0 or later (Sonoma)
 - **Xcode**: 15.0 or later
 - **Swift**: 5.9 or later
-- **Supported Audio**: MP3 files with ID3 tags
 
-## Known Limitations
+### Configuration (Mac Sandbox)
+For **Nearby Share** to work on macOS, you must enable network entitlements in Xcode:
+1. Select the **SenkuPlayer** target.
+2. Go to **Signing & Capabilities**.
+3. Under **App Sandbox**, check:
+   - [x] Incoming Connections (Server)
+   - [x] Outgoing Connections (Client)
 
-1. **Dynamic Island**: Requires iOS 16.1+ and iPhone 14 Pro or later
-   - Implementation requires ActivityKit and Live Activities
-   - Falls back to standard Now Playing on older devices
+### Local Network Permissions (iOS)
+iOS will prompt for **Local Network** access the first time you use Nearby Share. Ensure this is granted to allow device discovery.
 
-2. **File Access**: 
-   - Requires user to grant folder access
-   - Security-scoped resources need proper handling
+## 🚀 How to Use
 
-3. **Supported Formats**: 
-   - Currently only MP3 files
-   - Can be extended to support AAC, FLAC, etc.
+### Importing Music
+1. Tap the **Add Folder** icon in the Library.
+2. Select any folder containing MP3 files.
+3. SenkuPlayer will recursively scan and organize them into Artists, Albums, and Songs.
 
-## Future Enhancements
+### Sharing Songs Nearby
+1. **From Library**: Swipe left on any song and tap the blue **Share** icon.
+2. **From Selection**: Tap **Select**, pick multiple songs, and tap **Send** in the top right.
+3. **From Player**: Tap the Share (Wave) icon in the Now Playing screen.
+4. The receiver must also be in the "Nearby" tab for discovery to work.
 
-- [ ] Dynamic Island Live Activity integration
-- [ ] Equalizer controls
-- [ ] Lyrics display
-- [ ] iCloud sync for playlists
-- [ ] CarPlay support
-- [ ] Widget support
-- [ ] Additional audio format support (AAC, FLAC, WAV)
-- [ ] Smart playlists
-- [ ] Sleep timer
-- [ ] Crossfade between tracks
+## 📝 Troubleshooting
 
-## Troubleshooting
+- **Mac can't find iPhone**: Ensure both devices have Wi-Fi and Bluetooth ON. Check if the Mac Firewall or a VPN is blocking local connections.
+- **Music stops in background**: Verify that "Background Modes" (Audio) is enabled in Xcode Capabilities.
+- **Artwork not showing**: SenkuPlayer extracts artwork directly from the file's ID3 tags. If it's missing, try using a metadata editor like Mp3tag.
 
-### Music Not Playing in Background
-1. Verify Background Modes capability is enabled
-2. Check audio session configuration in SenkuPlayerApp.swift
-3. Ensure device is not in Low Power Mode (may restrict background audio)
-
-### Files Not Importing
-1. Check file permissions
-2. Ensure files are MP3 format
-3. Verify folder access was granted
-4. Check console for error messages
-
-### Metadata Not Showing
-1. Verify MP3 files have ID3 tags
-2. Use a tool like Mp3tag to add/edit metadata
-3. Re-scan the library after updating tags
-
-## License
-
-This project is for educational purposes demonstrating iOS audio playback and UI design.
-
-## Credits
-
-Developed by Amal
-Inspired by Apple Music's beautiful design
+---
+**Developed by Amal**  
+*Building a premium community-driven music experience.*

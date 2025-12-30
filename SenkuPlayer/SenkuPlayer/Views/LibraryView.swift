@@ -38,23 +38,35 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("Library")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showingFilePicker = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.blue)
-                    }
+                    addButton
                 }
+                #else
+                ToolbarItem(placement: .primaryAction) {
+                    addButton
+                }
+                #endif
             }
             .sheet(isPresented: $showingFilePicker) {
                 DocumentPicker { urls in
                     library.importFiles(urls)
                 }
             }
+        }
+    }
+    
+    private var addButton: some View {
+        Button {
+            showingFilePicker = true
+        } label: {
+            Image(systemName: "plus.circle.fill")
+                .font(.title2)
+                .foregroundColor(.blue)
         }
     }
     
@@ -103,7 +115,7 @@ struct SearchBar: View {
             }
         }
         .padding(8)
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.12))
         .cornerRadius(10)
     }
 }

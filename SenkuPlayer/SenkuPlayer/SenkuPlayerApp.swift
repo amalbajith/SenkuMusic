@@ -11,6 +11,7 @@ import AVFoundation
 @main
 struct SenkuPlayerApp: App {
     init() {
+        #if os(iOS)
         // Configure audio session for background playback
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
@@ -18,6 +19,7 @@ struct SenkuPlayerApp: App {
         } catch {
             print("Failed to setup audio session: \(error)")
         }
+        #endif
     }
     
     var body: some Scene {

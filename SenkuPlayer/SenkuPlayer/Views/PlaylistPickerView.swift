@@ -52,9 +52,11 @@ struct PlaylistPickerView: View {
                 }
             }
             .navigationTitle("Add to Playlist")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     Button("Cancel") {
                         dismiss()
                     }

@@ -30,6 +30,13 @@ struct PlaylistsListView: View {
                 }
             } else {
                 List {
+                    // Favorites Section
+                    if searchText.isEmpty {
+                        NavigationLink(destination: FavoritesDetailView()) {
+                            FavoritesRow()
+                        }
+                    }
+                    
                     ForEach(filteredPlaylists) { playlist in
                         NavigationLink(destination: PlaylistDetailView(playlist: playlist)) {
                             PlaylistRow(playlist: playlist)
@@ -41,7 +48,7 @@ struct PlaylistsListView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .automatic) {
                 Button {
                     showingCreatePlaylist = true
                 } label: {
@@ -73,6 +80,169 @@ struct PlaylistsListView: View {
     }
 }
 
+// MARK: - Favorites Components
+
+struct FavoritesRow: View {
+    @StateObject private var library = MusicLibraryManager.shared
+    @StateObject private var favorites = FavoritesManager.shared
+    
+    private var songs: [Song] {
+        favorites.getFavorites(from: library.songs)
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                if let song = songs.first, 
+                   let artworkData = song.artworkData, 
+                   let platformImage = PlatformImage.fromData(artworkData) {
+                    Image(platformImage: platformImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .cornerRadius(8)
+                        .overlay {
+                            Color.black.opacity(0.3)
+                                .cornerRadius(8)
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 60, height: 60)
+                }
+                
+                Image(systemName: "heart.fill")
+                    .foregroundColor(.white)
+                    .shadow(radius: 2)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Favorites")
+                    .font(.body)
+                    .fontWeight(.medium)
+                
+                Text("\(songs.count) song\(songs.count != 1 ? "s" : "")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct FavoritesDetailView: View {
+    @StateObject private var library = MusicLibraryManager.shared
+    @StateObject private var favorites = FavoritesManager.shared
+    @StateObject private var player = AudioPlayerManager.shared
+    
+    private var songs: [Song] {
+        favorites.getFavorites(from: library.songs)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 16) {
+                ZStack {
+                     if let song = songs.first, 
+                        let artworkData = song.artworkData, 
+                        let platformImage = PlatformImage.fromData(artworkData) {
+                          Image(platformImage: platformImage)
+                              .resizable()
+                              .aspectRatio(contentMode: .fill)
+                              .frame(width: 200, height: 200)
+                              .cornerRadius(16)
+                              .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                     } else {
+                          RoundedRectangle(cornerRadius: 16)
+                              .fill(LinearGradient(colors: [.red, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                              .frame(width: 200, height: 200)
+                              .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                     }
+                    
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.white)
+                        .shadow(radius: 4)
+                }
+                
+                Text("Favorites")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Text("\(songs.count) song\(songs.count != 1 ? "s" : "")")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                if !songs.isEmpty {
+                    Button {
+                        if let firstSong = songs.first {
+                            player.playSong(firstSong, in: songs, at: 0)
+                        }
+                    } label: {
+                        Label("Play", systemImage: "play.fill")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                }
+            }
+            .padding(.vertical, 24)
+            
+            if songs.isEmpty {
+                 VStack(spacing: 16) {
+                     Image(systemName: "heart.slash")
+                         .font(.system(size: 50))
+                         .foregroundColor(.gray)
+                     
+                     Text("No Favorites Yet")
+                         .font(.title3)
+                         .fontWeight(.semibold)
+                     
+                     Text("Tap the heart icon on the player to add songs")
+                         .font(.subheadline)
+                         .foregroundColor(.secondary)
+                         .multilineTextAlignment(.center)
+                 }
+                 .frame(maxHeight: .infinity)
+            } else {
+                List {
+                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                        SongRow(
+                            song: song,
+                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                            isSelected: false,
+                            isSelectionMode: false
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            player.playSong(song, in: songs, at: index)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                favorites.toggleFavorite(song: song)
+                            } label: {
+                                Label("Remove", systemImage: "heart.slash")
+                            }
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+    }
+}
+
+// MARK: - Playlist Components
+
 struct PlaylistRow: View {
     @StateObject private var library = MusicLibraryManager.shared
     let playlist: Playlist
@@ -83,12 +253,10 @@ struct PlaylistRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Playlist Artwork (Grid of 4 songs)
             PlaylistArtwork(songs: songs)
                 .frame(width: 60, height: 60)
                 .cornerRadius(8)
             
-            // Playlist Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(playlist.name)
                     .font(.body)
@@ -111,7 +279,7 @@ struct PlaylistArtwork: View {
     var body: some View {
         if songs.isEmpty {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.systemGray5))
+                .fill(Color.gray.opacity(0.15))
                 .overlay {
                     Image(systemName: "music.note.list")
                         .foregroundColor(.gray)
@@ -126,8 +294,8 @@ struct PlaylistArtwork: View {
     private func singleArtwork(_ song: Song) -> some View {
         Group {
             if let artworkData = song.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
@@ -168,24 +336,18 @@ struct PlaylistArtwork: View {
         Group {
             if let song = song,
                let artworkData = song.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size, height: size)
                     .clipped()
             } else {
                 Rectangle()
-                    .fill(Color(.systemGray5))
+                    .fill(Color.gray.opacity(0.15))
                     .frame(width: size, height: size)
             }
         }
-    }
-}
-
-extension Array {
-    subscript(safe index: Int) -> Element? {
-        return indices.contains(index) ? self[index] : nil
     }
 }
 
@@ -193,7 +355,6 @@ struct PlaylistDetailView: View {
     @StateObject private var library = MusicLibraryManager.shared
     @StateObject private var player = AudioPlayerManager.shared
     @State var playlist: Playlist
-    @State private var isEditMode = false
     @Environment(\.dismiss) private var dismiss
     
     private var songs: [Song] {
@@ -202,7 +363,6 @@ struct PlaylistDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             VStack(spacing: 16) {
                 PlaylistArtwork(songs: songs)
                     .frame(width: 200, height: 200)
@@ -236,7 +396,6 @@ struct PlaylistDetailView: View {
             }
             .padding(.vertical, 24)
             
-            // Songs List
             if songs.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "music.note.list")
@@ -272,11 +431,15 @@ struct PlaylistDetailView: View {
                 .listStyle(.plain)
             }
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
+            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
             }
+            #endif
         }
     }
     
@@ -325,6 +488,14 @@ struct EmptyPlaylistsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+    }
+}
+
+// MARK: - Extensions
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }
 

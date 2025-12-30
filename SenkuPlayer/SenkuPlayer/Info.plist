@@ -6,5 +6,12 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>SenkuPlayer needs access to the local network to share songs with nearby friends.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_senku-share._tcp</string>
+		<string>_senku-share._udp</string>
+	</array>
 </dict>
 </plist>

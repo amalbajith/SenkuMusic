@@ -9,7 +9,7 @@ import SwiftUI
 import MultipeerConnectivity
 
 struct NearbyShareView: View {
-    let song: Song?
+    let songs: [Song]
     @StateObject private var multipeer = MultipeerManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var sentToPeers: Set<MCPeerID> = []
@@ -35,7 +35,7 @@ struct NearbyShareView: View {
                         .foregroundColor(.blue)
                 }
                 
-                Text(song != nil ? "Looking for nearby friends..." : "Discoverable to others")
+                Text(!songs.isEmpty ? "Looking for nearby friends..." : "Discoverable to others")
                     .font(.headline)
                     .foregroundColor(.secondary)
             }
@@ -62,7 +62,7 @@ struct NearbyShareView: View {
                         
                         Spacer()
                         
-                        if let _ = song {
+                        if !songs.isEmpty {
                             // Sending Mode
                             if sentToPeers.contains(peer) {
                                 Text("Sent")
@@ -70,7 +70,7 @@ struct NearbyShareView: View {
                                     .foregroundColor(.green)
                             } else if multipeer.connectedPeers.contains(peer) {
                                 Button("Send") {
-                                    sendSong(to: peer)
+                                    sendSongs(to: peer)
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .tint(.blue)
@@ -98,53 +98,89 @@ struct NearbyShareView: View {
                         }
                     }
                 }
+                #if os(iOS)
                 .listStyle(.insetGrouped)
+                #endif
             }
             
             // Sharing Info (Only if sending)
-            if let song = song {
+            if !songs.isEmpty {
                 VStack(spacing: 8) {
-                    Text("Sharing:")
+                    Text("Sharing \(songs.count) song\(songs.count == 1 ? "" : "s"):")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    HStack {
-                        if let artwork = song.artworkData, let uiImage = UIImage(data: artwork) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .frame(width: 30, height: 30)
-                                .cornerRadius(4)
+                    if songs.count == 1, let song = songs.first {
+                        HStack {
+                            if let artwork = song.artworkData, 
+                               let platformImage = PlatformImage.fromData(artwork) {
+                                Image(platformImage: platformImage)
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+                                    .cornerRadius(4)
+                            }
+                            
+                            VStack(alignment: .leading) {
+                                Text(song.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                Text(song.artist)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        
-                        VStack(alignment: .leading) {
-                            Text(song.title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text(song.artist)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        .padding()
+                        .background(Color.gray.opacity(0.12))
+                        .cornerRadius(12)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(songs) { song in
+                                    VStack(alignment: .center, spacing: 4) {
+                                        if let artwork = song.artworkData, 
+                                           let platformImage = PlatformImage.fromData(artwork) {
+                                            Image(platformImage: platformImage)
+                                                .resizable()
+                                                .frame(width: 40, height: 40)
+                                                .cornerRadius(6)
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.gray.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                                .overlay {
+                                                    Image(systemName: "music.note")
+                                                        .font(.caption)
+                                                }
+                                        }
+                                        
+                                        Text(song.title)
+                                            .font(.system(size: 10))
+                                            .lineLimit(1)
+                                            .frame(width: 50)
+                                    }
+                                }
+                            }
+                            .padding()
                         }
+                        .background(Color.gray.opacity(0.12))
+                        .cornerRadius(12)
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
                 }
                 .padding()
             }
         }
         .navigationTitle("Nearby Share")
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
-            // Only show Cancel if presented modally with a song (heuristic)
-            if song != nil {
-                ToolbarItem(placement: .navigationBarLeading) {
+            if !songs.isEmpty {
+                ToolbarItem(placement: .automatic) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
             }
-
-
         }
         .onAppear {
             multipeer.startBrowsing()
@@ -154,9 +190,10 @@ struct NearbyShareView: View {
         }
     }
     
-    private func sendSong(to peer: MCPeerID) {
-        guard let song = song else { return }
-        multipeer.sendSong(song.url, to: peer)
+    private func sendSongs(to peer: MCPeerID) {
+        for song in songs {
+            multipeer.sendSong(song.url, to: peer)
+        }
         sentToPeers.insert(peer)
     }
 }

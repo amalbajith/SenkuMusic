@@ -6,24 +6,23 @@
 //
 
 import SwiftUI
-import UIKit
 import UniformTypeIdentifiers
+
+#if os(iOS)
+import UIKit
 
 struct DocumentPicker: UIViewControllerRepresentable {
     let onSelect: ([URL]) -> Void
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        // Allow selecting MP3 files directly
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .mp3], asCopy: false)
         picker.delegate = context.coordinator
-        picker.allowsMultipleSelection = true // Enable multiple file selection
+        picker.allowsMultipleSelection = true
         picker.shouldShowFileExtensions = true
         return picker
     }
     
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
-        // No updates needed
-    }
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
         Coordinator(onSelect: onSelect)
@@ -31,31 +30,41 @@ struct DocumentPicker: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, UIDocumentPickerDelegate {
         let onSelect: ([URL]) -> Void
-        
-        init(onSelect: @escaping ([URL]) -> Void) {
-            self.onSelect = onSelect
-        }
+        init(onSelect: @escaping ([URL]) -> Void) { self.onSelect = onSelect }
         
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            // Start accessing security-scoped resources
-            var accessedURLs: [URL] = []
-            
-            for url in urls {
-                if url.startAccessingSecurityScopedResource() {
-                    accessedURLs.append(url)
-                }
-            }
-            
-            // Pass all selected URLs
+            let accessedURLs = urls.filter { $0.startAccessingSecurityScopedResource() }
             if !accessedURLs.isEmpty {
                 onSelect(accessedURLs)
             }
-            
-            // Stop accessing after a delay to allow processing
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 accessedURLs.forEach { $0.stopAccessingSecurityScopedResource() }
             }
         }
     }
 }
+#elseif os(macOS)
+import AppKit
 
+struct DocumentPicker: View {
+    let onSelect: ([URL]) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        Color.clear
+            .onAppear {
+                let panel = NSOpenPanel()
+                panel.allowsMultipleSelection = true
+                panel.canChooseDirectories = false
+                panel.allowedContentTypes = [.audio, .mp3]
+                
+                panel.begin { response in
+                    if response == .OK {
+                        onSelect(panel.urls)
+                    }
+                    dismiss()
+                }
+            }
+    }
+}
+#endif

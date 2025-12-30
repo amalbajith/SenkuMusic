@@ -23,6 +23,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var currentIndex: Int = 0
     @Published var repeatMode: RepeatMode = .off
     @Published var isShuffled = false
+    @Published var isNowPlayingPresented = false
     
     // MARK: - Private Properties
     private var player: AVPlayer?
@@ -45,6 +46,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     
     // MARK: - Audio Session Setup
     private func setupAudioSession() {
+        #if os(iOS)
         do {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default, options: [])
@@ -53,6 +55,9 @@ class AudioPlayerManager: NSObject, ObservableObject {
         } catch {
             print("❌ Failed to setup audio session: \(error.localizedDescription)")
         }
+        #else
+        print("✅ macOS Audio Session uses default system configuration")
+        #endif
     }
     
     // MARK: - Remote Command Center
@@ -107,6 +112,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
             object: nil
         )
         
+        #if os(iOS)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleInterruption),
@@ -120,6 +126,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
             name: AVAudioSession.routeChangeNotification,
             object: nil
         )
+        #endif
     }
     
     @objc private func playerDidFinishPlaying() {
@@ -139,6 +146,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         }
     }
     
+    #if os(iOS)
     @objc private func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -177,6 +185,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
             break
         }
     }
+    #endif
     
     // MARK: - Playback Control
     func playSong(_ song: Song, in queue: [Song], at index: Int) {
@@ -338,7 +347,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         
         // Add artwork if available
         if let artworkData = song.artworkData,
-           let image = UIImage(data: artworkData) {
+           let image = PlatformImage.fromData(artworkData) {
             let artwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
             nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
         }

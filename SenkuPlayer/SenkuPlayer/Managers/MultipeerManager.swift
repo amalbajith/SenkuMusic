@@ -21,12 +21,16 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var availablePeers: [MCPeerID] = []
     @Published var connectedPeers: [MCPeerID] = []
     @Published var receivedSongURL: URL?
+    @Published var lastReceivedSongName: String?
+    @Published var showReceivedNotification = false
     @Published var isReceiving = false
     @Published var transferProgress: Double = 0
     
     override init() {
-        let deviceName = UIDevice.current.name
-        myPeerId = MCPeerID(displayName: deviceName)
+        // Sanitize device name (remove special characters that can break discovery)
+        let rawName = PlatformUtils.deviceName
+        let sanitizedName = rawName.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: " ")
+        myPeerId = MCPeerID(displayName: sanitizedName.isEmpty ? "Unknown Device" : sanitizedName)
         
         session = MCSession(peer: myPeerId, securityIdentity: nil, encryptionPreference: .required)
         serviceAdvertiser = MCNearbyServiceAdvertiser(peer: myPeerId, discoveryInfo: nil, serviceType: serviceType)
@@ -137,6 +141,8 @@ extension MultipeerManager: MCSessionDelegate {
                 print("Moved file to: \(destinationURL.path)")
                 
                 self.receivedSongURL = destinationURL
+                self.lastReceivedSongName = resourceName.replacingOccurrences(of: ".mp3", with: "", options: .caseInsensitive)
+                self.showReceivedNotification = true
                 
                 // Refresh library
                 MusicLibraryManager.shared.loadMusicFiles()

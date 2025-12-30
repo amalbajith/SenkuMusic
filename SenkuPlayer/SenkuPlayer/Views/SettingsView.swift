@@ -6,10 +6,14 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct SettingsView: View {
     @StateObject private var library = MusicLibraryManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var showingClearLibraryAlert = false
     @AppStorage("darkMode") private var darkMode = false
     @Environment(\.colorScheme) private var colorScheme
@@ -95,7 +99,7 @@ struct SettingsView: View {
                         
                         Button {
                             if let url = URL(string: "https://github.com/iamalbajith") {
-                                UIApplication.shared.open(url)
+                                openURL(url)
                             }
                         } label: {
                             HStack {
@@ -121,7 +125,7 @@ struct SettingsView: View {
                             Text("Version")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text("1.0.0")
+                            Text("1.2.0")
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -130,7 +134,7 @@ struct SettingsView: View {
                     HStack {
                         Text("Build")
                         Spacer()
-                        Text("1")
+                        Text("15")
                             .foregroundColor(.secondary)
                     }
                 } header: {
@@ -138,9 +142,11 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .automatic) {
                     Button("Done") {
                         dismiss()
                     }
@@ -170,8 +176,10 @@ struct SettingsView: View {
         versionTapCount += 1
         
         // Haptic feedback
+        #if os(iOS)
         let impact = UIImpactFeedbackGenerator(style: .light)
         impact.impactOccurred()
+        #endif
         
         // Show developer section after 7 taps
         if versionTapCount >= 7 && !showDeveloperSection {
@@ -180,8 +188,10 @@ struct SettingsView: View {
             }
             
             // Success haptic
+            #if os(iOS)
             let notification = UINotificationFeedbackGenerator()
             notification.notificationOccurred(.success)
+            #endif
             
             // Reset counter
             versionTapCount = 0

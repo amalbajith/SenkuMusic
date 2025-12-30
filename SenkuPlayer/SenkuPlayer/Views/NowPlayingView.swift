@@ -6,26 +6,24 @@
 //
 
 import SwiftUI
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
 struct NowPlayingView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var isDraggingSlider = false
     @State private var draggedTime: TimeInterval = 0
-    
+    @StateObject private var favoritesManager = FavoritesManager.shared
+
     var body: some View {
         ZStack {
             // Background Gradient
-            LinearGradient(
-                colors: [
-                    Color(.systemBackground),
-                    artworkDominantColor.opacity(0.3),
-                    Color(.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            backgroundGradient
+                .ignoresSafeArea()
             
             VStack(spacing: 0) {
                 // Header
@@ -62,6 +60,24 @@ struct NowPlayingView: View {
         }
     }
     
+    private var backgroundGradient: some View {
+        #if os(iOS)
+        let bgColor = Color(uiColor: .systemBackground)
+        #else
+        let bgColor = Color(nsColor: .windowBackgroundColor)
+        #endif
+        
+        return LinearGradient(
+            colors: [
+                bgColor,
+                artworkDominantColor.opacity(0.3),
+                bgColor
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+    
     // MARK: - Header
     private var header: some View {
         HStack {
@@ -72,6 +88,18 @@ struct NowPlayingView: View {
                     .font(.title2)
                     .foregroundColor(.primary)
             }
+            
+            Button {
+                player.isNowPlayingPresented = false // Dismiss player to show share sheet
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: NSNotification.Name("ShowShareSheet"), object: player.currentSong)
+                }
+            } label: {
+                Image(systemName: "wave.3.backward.circle")
+                    .font(.title2)
+                    .foregroundColor(.primary)
+            }
+            .padding(.leading, 12)
             
             Spacer()
             
@@ -92,14 +120,16 @@ struct NowPlayingView: View {
         Group {
             if let song = player.currentSong,
                let artworkData = song.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                let size = PlatformUtils.screenWidth - 80
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: UIScreen.main.bounds.width - 80, height: UIScreen.main.bounds.width - 80)
+                    .frame(width: size, height: size)
                     .cornerRadius(20)
                     .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             } else {
+                let size = PlatformUtils.screenWidth - 80
                 RoundedRectangle(cornerRadius: 20)
                     .fill(
                         LinearGradient(
@@ -108,7 +138,7 @@ struct NowPlayingView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: UIScreen.main.bounds.width - 80, height: UIScreen.main.bounds.width - 80)
+                    .frame(width: size, height: size)
                     .overlay {
                         Image(systemName: "music.note")
                             .font(.system(size: 80))
@@ -121,16 +151,31 @@ struct NowPlayingView: View {
     
     // MARK: - Song Info
     private var songInfo: some View {
-        VStack(spacing: 8) {
-            Text(player.currentSong?.title ?? "Not Playing")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .lineLimit(1)
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(player.currentSong?.title ?? "Not Playing")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                
+                Text(player.currentSong?.artist ?? "Unknown Artist")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
             
-            Text(player.currentSong?.artist ?? "Unknown Artist")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+            Spacer()
+            
+            if let song = player.currentSong {
+                Button {
+                    favoritesManager.toggleFavorite(song: song)
+                } label: {
+                    Image(systemName: favoritesManager.isFavorite(song: song) ? "heart.fill" : "heart")
+                        .font(.title2)
+                        .foregroundColor(favoritesManager.isFavorite(song: song) ? .red : .secondary)
+                        .symbolEffect(.bounce, value: favoritesManager.isFavorite(song: song))
+                }
+            }
         }
     }
     
@@ -248,8 +293,12 @@ struct NowPlayingView: View {
     private var artworkDominantColor: Color {
         if let song = player.currentSong,
            let artworkData = song.artworkData,
-           let uiImage = UIImage(data: artworkData) {
-            return Color(uiImage.averageColor ?? .systemGray)
+           let platformImage = PlatformImage.fromData(artworkData) {
+            #if os(iOS)
+            return Color(platformColor: platformImage.averageColor ?? .systemGray6)
+            #else
+            return Color(platformColor: platformImage.averageColor ?? .windowBackgroundColor)
+            #endif
         }
         return Color.blue
     }
@@ -258,23 +307,6 @@ struct NowPlayingView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
-    }
-}
-
-// MARK: - UIImage Extension for Average Color
-extension UIImage {
-    var averageColor: UIColor? {
-        guard let inputImage = CIImage(image: self) else { return nil }
-        let extentVector = CIVector(x: inputImage.extent.origin.x, y: inputImage.extent.origin.y, z: inputImage.extent.size.width, w: inputImage.extent.size.height)
-        
-        guard let filter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: inputImage, kCIInputExtentKey: extentVector]) else { return nil }
-        guard let outputImage = filter.outputImage else { return nil }
-        
-        var bitmap = [UInt8](repeating: 0, count: 4)
-        let context = CIContext(options: [.workingColorSpace: kCFNull as Any])
-        context.render(outputImage, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-        
-        return UIColor(red: CGFloat(bitmap[0]) / 255, green: CGFloat(bitmap[1]) / 255, blue: CGFloat(bitmap[2]) / 255, alpha: CGFloat(bitmap[3]) / 255)
     }
 }
 

@@ -43,8 +43,8 @@ struct ArtistRow: View {
             // Artist Avatar
             if let firstSong = artist.songs.first,
                let artworkData = firstSong.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 50, height: 50)
@@ -96,8 +96,8 @@ struct ArtistDetailView: View {
                     // Artist Avatar
                     if let firstSong = artist.songs.first,
                        let artworkData = firstSong.artworkData,
-                       let uiImage = UIImage(data: artworkData) {
-                        Image(uiImage: uiImage)
+                       let platformImage = PlatformImage.fromData(artworkData) {
+                        Image(platformImage: platformImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 120, height: 120)
@@ -202,7 +202,9 @@ struct ArtistDetailView: View {
                 .padding(.bottom, 24)
             }
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 }
 
@@ -213,8 +215,8 @@ struct ArtistAlbumItem: View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
             if let artworkData = album.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(1, contentMode: .fill)
                     .frame(width: 140, height: 140)

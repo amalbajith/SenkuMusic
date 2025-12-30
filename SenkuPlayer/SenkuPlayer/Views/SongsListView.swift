@@ -14,7 +14,12 @@ struct SongsListView: View {
     @State private var selectedSongs: Set<UUID> = []
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
-    @State private var songToShare: Song?
+    @State private var shareTarget: ShareTarget?
+    
+    struct ShareTarget: Identifiable {
+        let id = UUID()
+        let songs: [Song]
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -37,9 +42,17 @@ struct SongsListView: View {
                                 playSong(song)
                             }
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                shareTarget = ShareTarget(songs: [song])
+                            } label: {
+                                Label("Share", systemImage: "wave.3.backward.circle.fill")
+                            }
+                            .tint(.blue)
+                        }
                         .contextMenu {
                             Button {
-                                songToShare = song
+                                shareTarget = ShareTarget(songs: [song])
                             } label: {
                                 Label("Share Nearby", systemImage: "wave.3.backward.circle")
                             }
@@ -64,11 +77,18 @@ struct SongsListView: View {
         }
         .toolbar {
             if !songs.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(isSelectionMode ? "Done" : "Select") {
-                        isSelectionMode.toggle()
-                        if !isSelectionMode {
-                            selectedSongs.removeAll()
+                ToolbarItem(placement: .automatic) {
+                    Button(isSelectionMode ? (selectedSongs.isEmpty ? "Done" : "Send") : "Select") {
+                        if isSelectionMode {
+                            if !selectedSongs.isEmpty {
+                                let selected = songs.filter { selectedSongs.contains($0.id) }
+                                shareTarget = ShareTarget(songs: selected)
+                            } else {
+                                isSelectionMode = false
+                                selectedSongs.removeAll()
+                            }
+                        } else {
+                            isSelectionMode = true
                         }
                     }
                 }
@@ -77,9 +97,14 @@ struct SongsListView: View {
         .sheet(isPresented: $showingPlaylistPicker) {
             PlaylistPickerView(songIDs: Array(selectedSongs))
         }
-        .sheet(item: $songToShare) { song in
+        .sheet(item: $shareTarget) { target in
             NavigationStack {
-                NearbyShareView(song: song)
+                NearbyShareView(songs: target.songs)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowShareSheet"))) { notification in
+            if let song = notification.object as? Song {
+                shareTarget = ShareTarget(songs: [song])
             }
         }
     }
@@ -95,12 +120,12 @@ struct SongsListView: View {
             Button {
                 showingPlaylistPicker = true
             } label: {
-                Label("Add to Playlist", systemImage: "text.badge.plus")
+                Label("Playlist", systemImage: "plus.app")
             }
             .disabled(selectedSongs.isEmpty)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.gray.opacity(0.12))
     }
     
     private func toggleSelection(_ id: UUID) {
@@ -135,15 +160,15 @@ struct SongRow: View {
             
             // Artwork
             if let artworkData = song.artworkData,
-               let uiImage = UIImage(data: artworkData) {
-                Image(uiImage: uiImage)
+               let platformImage = PlatformImage.fromData(artworkData) {
+                Image(platformImage: platformImage)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 50, height: 50)
                     .cornerRadius(8)
             } else {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
+                    .fill(Color.gray.opacity(0.1))
                     .frame(width: 50, height: 50)
                     .overlay {
                         Image(systemName: "music.note")

@@ -9,7 +9,6 @@ import SwiftUI
 
 struct MiniPlayerView: View {
     @StateObject private var player = AudioPlayerManager.shared
-    @State private var showingNowPlaying = false
     
     var body: some View {
         if player.currentSong != nil {
@@ -26,8 +25,8 @@ struct MiniPlayerView: View {
                 HStack(spacing: 12) {
                     // Artwork
                     if let artworkData = player.currentSong?.artworkData,
-                       let uiImage = UIImage(data: artworkData) {
-                        Image(uiImage: uiImage)
+                       let platformImage = PlatformImage.fromData(artworkData) {
+                        Image(platformImage: platformImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 50, height: 50)
@@ -98,12 +97,12 @@ struct MiniPlayerView: View {
                 .background(.ultraThinMaterial)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    showingNowPlaying = true
+                    player.isNowPlayingPresented = true
                 }
 
             }
             .transition(.move(edge: .bottom).combined(with: .opacity))
-            .sheet(isPresented: $showingNowPlaying) {
+            .sheet(isPresented: $player.isNowPlayingPresented) {
                 NowPlayingView()
             }
             .cornerRadius(35)
