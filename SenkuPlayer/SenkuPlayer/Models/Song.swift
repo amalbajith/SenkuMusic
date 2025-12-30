@@ -44,9 +44,9 @@ struct Song: Identifiable, Codable, Equatable {
 
 // MARK: - Metadata Extraction
 extension Song {
-    static func fromURL(_ url: URL) -> Song? {
+    static func fromURL(_ url: URL) async -> Song? {
         let asset = AVAsset(url: url)
-        
+
         var title = url.deletingPathExtension().lastPathComponent
         var artist = "Unknown Artist"
         var album = "Unknown Album"
@@ -57,54 +57,64 @@ extension Song {
         var year: Int?
         var trackNumber: Int?
         var discNumber: Int?
-        
-        // Get duration
-        duration = asset.duration.seconds
-        
-        // Extract metadata
-        let metadata = asset.commonMetadata
-        
-        for item in metadata {
-            guard let key = item.commonKey?.rawValue,
-                  let value = item.value else { continue }
-            
+
+        // Load duration asynchronously to avoid blocking lower QoS threads
+        do {
+            let time = try await asset.load(.duration)
+            duration = time.seconds
+        } catch {
+            // Keep default duration = 0
+        }
+
+        // Load common metadata asynchronously
+        let commonMetadata: [AVMetadataItem]
+        do {
+            commonMetadata = try await asset.load(.commonMetadata)
+        } catch {
+            commonMetadata = []
+        }
+
+        for item in commonMetadata {
+            guard let key = item.commonKey?.rawValue else { continue }
             switch key {
             case "title":
-                if let titleValue = value as? String {
-                    title = titleValue
-                }
+                if let titleValue = item.stringValue { title = titleValue }
             case "artist":
-                if let artistValue = value as? String {
-                    artist = artistValue
-                }
+                if let artistValue = item.stringValue { artist = artistValue }
             case "albumName":
-                if let albumValue = value as? String {
-                    album = albumValue
-                }
+                if let albumValue = item.stringValue { album = albumValue }
             case "type":
-                if let genreValue = value as? String {
-                    genre = genreValue
-                }
+                if let genreValue = item.stringValue { genre = genreValue }
             case "artwork":
-                if let imageData = value as? Data {
-                    artworkData = imageData
-                }
+                if let data = item.dataValue { artworkData = data }
             default:
                 break
             }
         }
-        
-        // Try to extract additional ID3 tags
-        for format in asset.availableMetadataFormats {
-            let formatMetadata = asset.metadata(forFormat: format)
-            
+
+        // Load available metadata formats asynchronously (iOS 16+ API)
+        let formats: [AVMetadataFormat]
+        do {
+            formats = try await asset.load(.availableMetadataFormats)
+        } catch {
+            formats = []
+        }
+
+        // For each format, load its metadata asynchronously and parse additional tags
+        for format in formats {
+            let formatMetadata: [AVMetadataItem]
+            do {
+                formatMetadata = try await asset.loadMetadata(for: format)
+            } catch {
+                continue
+            }
+
             for item in formatMetadata {
-                if let keyString = item.key as? String {
+                // Prefer stringValue to avoid bridging issues
+                if let keyString = (item.key as? String) ?? item.identifier?.rawValue {
                     switch keyString {
                     case "TPE2", "©ART": // Album Artist
-                        if let value = item.stringValue {
-                            albumArtist = value
-                        }
+                        if let value = item.stringValue { albumArtist = value }
                     case "TDRC", "©day": // Year
                         if let value = item.stringValue {
                             let yearString = value.prefix(4)
@@ -113,16 +123,12 @@ extension Song {
                     case "TRCK": // Track Number
                         if let value = item.stringValue {
                             let components = value.split(separator: "/")
-                            if let first = components.first {
-                                trackNumber = Int(first)
-                            }
+                            if let first = components.first { trackNumber = Int(first) }
                         }
                     case "TPOS": // Disc Number
                         if let value = item.stringValue {
                             let components = value.split(separator: "/")
-                            if let first = components.first {
-                                discNumber = Int(first)
-                            }
+                            if let first = components.first { discNumber = Int(first) }
                         }
                     default:
                         break
@@ -130,12 +136,11 @@ extension Song {
                 }
             }
         }
-        
+
         // Generate a stable ID based on the URL path
-        // Since the Documents directory path can change on iOS, we use the relative path or filename
         let stableString = url.lastPathComponent
         let id = UUID(uuidString: stableString.padTo32()) ?? UUID()
-        
+
         return Song(
             id: id,
             url: url,
@@ -151,6 +156,8 @@ extension Song {
             discNumber: discNumber
         )
     }
+
+
 }
 
 private extension String {

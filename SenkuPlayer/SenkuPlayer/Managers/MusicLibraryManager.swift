@@ -45,7 +45,7 @@ class MusicLibraryManager: ObservableObject {
         isScanning = true
         scanProgress = 0
         
-        DispatchQueue.global(qos: .default).async { [weak self] in
+        Task(priority: .background) { [weak self] in
             guard let self = self else { return }
             
             var foundSongs: [Song] = []
@@ -60,17 +60,18 @@ class MusicLibraryManager: ObservableObject {
                 let total = Double(mp3URLs.count)
                 
                 for (index, fileURL) in mp3URLs.enumerated() {
-                    if let song = Song.fromURL(fileURL) {
+                    if let song = await Song.fromURL(fileURL) {
                         foundSongs.append(song)
                     }
                     
-                    DispatchQueue.main.async {
-                        self.scanProgress = Double(index + 1) / total
+                    let progress = Double(index + 1) / total
+                    await MainActor.run {
+                        self.scanProgress = progress
                     }
                 }
             }
             
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.songs.append(contentsOf: foundSongs)
                 self.organizeLibrary()
                 self.saveSongs()
@@ -85,7 +86,7 @@ class MusicLibraryManager: ObservableObject {
         isScanning = true
         scanProgress = 0
         
-        DispatchQueue.global(qos: .default).async { [weak self] in
+        Task(priority: .background) { [weak self] in
             guard let self = self else { return }
             
             var foundSongs: [Song] = []
@@ -93,7 +94,7 @@ class MusicLibraryManager: ObservableObject {
             
             // Get app's Documents/Music directory
             guard let documentsURL = self.fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isScanning = false
                     self.scanProgress = 0
                 }
@@ -120,7 +121,7 @@ class MusicLibraryManager: ObservableObject {
                             try self.fileManager.copyItem(at: fileURL, to: destinationURL)
                             
                             // Create Song from copied file
-                            if let song = Song.fromURL(destinationURL) {
+                            if let song = await Song.fromURL(destinationURL) {
                                 foundSongs.append(song)
                             }
                         } catch {
@@ -128,20 +129,25 @@ class MusicLibraryManager: ObservableObject {
                         }
                     } else {
                         // File exists, check if already in library
-                        if !self.songs.contains(where: { $0.url == destinationURL }) {
-                            if let song = Song.fromURL(destinationURL) {
+                        let songExists = await MainActor.run {
+                            self.songs.contains(where: { $0.url == destinationURL })
+                        }
+                        
+                        if !songExists {
+                            if let song = await Song.fromURL(destinationURL) {
                                 foundSongs.append(song)
                             }
                         }
                     }
                 }
                 
-                DispatchQueue.main.async {
-                    self.scanProgress = Double(index + 1) / total
+                let progress = Double(index + 1) / total
+                await MainActor.run {
+                    self.scanProgress = progress
                 }
             }
             
-            DispatchQueue.main.async {
+            await MainActor.run {
                 if !foundSongs.isEmpty {
                     self.songs.append(contentsOf: foundSongs)
                     self.organizeLibrary()
@@ -303,7 +309,7 @@ class MusicLibraryManager: ObservableObject {
     }
     
     func loadSavedData() {
-        DispatchQueue.global(qos: .default).async { [weak self] in
+        Task(priority: .background) { [weak self] in
             guard let self = self else { return }
             
             var loadedSongs: [Song] = []
@@ -312,12 +318,15 @@ class MusicLibraryManager: ObservableObject {
             if let data = self.userDefaults.data(forKey: self.songsKey),
                let urls = try? JSONDecoder().decode([URL].self, from: data) {
                 
-                loadedSongs = urls.compactMap { (url: URL) -> Song? in
-                    guard self.fileManager.fileExists(atPath: url.path) else { return nil }
-                    return Song.fromURL(url)
+                for url in urls {
+                    if self.fileManager.fileExists(atPath: url.path) {
+                        if let song = await Song.fromURL(url) {
+                            loadedSongs.append(song)
+                        }
+                    }
                 }
                 
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.songs = loadedSongs
                     self.organizeLibrary()
                 }
@@ -330,35 +339,39 @@ class MusicLibraryManager: ObservableObject {
     }
     
     private func scanMusicDirectoryAsync(existingSongs: [Song]? = nil) {
-        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
-        
-        if !fileManager.fileExists(atPath: musicDirectory.path) {
-            try? fileManager.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
-            return
-        }
-        
-        guard let files = try? fileManager.contentsOfDirectory(at: musicDirectory, includingPropertiesForKeys: nil) else { return }
-        let mp3Files = files.filter { $0.pathExtension.lowercased() == "mp3" }
-        
-        // Use provided list or current library
-        let referenceSongs = existingSongs ?? self.songs
-        
-        var newSongs: [Song] = []
-        for fileURL in mp3Files {
-            // Use stable ID to check for duplicates
-            if !referenceSongs.contains(where: { $0.url.lastPathComponent == fileURL.lastPathComponent }) {
-                if let song = Song.fromURL(fileURL) {
-                    newSongs.append(song)
+        Task(priority: .background) { [weak self] in
+            guard let self = self else { return }
+            
+            guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+            let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
+            
+            if !fileManager.fileExists(atPath: musicDirectory.path) {
+                try? fileManager.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
+                return
+            }
+            
+            guard let files = try? fileManager.contentsOfDirectory(at: musicDirectory, includingPropertiesForKeys: nil) else { return }
+            let mp3Files = files.filter { $0.pathExtension.lowercased() == "mp3" }
+            
+            // Use provided list or current library
+            let referenceSongs = existingSongs ?? (await MainActor.run { self.songs })
+            
+            var newSongs: [Song] = []
+            for fileURL in mp3Files {
+                // Use stable ID to check for duplicates
+                if !referenceSongs.contains(where: { $0.url.lastPathComponent == fileURL.lastPathComponent }) {
+                    if let song = await Song.fromURL(fileURL) {
+                        newSongs.append(song)
+                    }
                 }
             }
-        }
-        
-        if !newSongs.isEmpty {
-            DispatchQueue.main.async {
-                self.songs.append(contentsOf: newSongs)
-                self.organizeLibrary()
-                self.saveSongs()
+            
+            if !newSongs.isEmpty {
+                await MainActor.run {
+                    self.songs.append(contentsOf: newSongs)
+                    self.organizeLibrary()
+                    self.saveSongs()
+                }
             }
         }
     }
