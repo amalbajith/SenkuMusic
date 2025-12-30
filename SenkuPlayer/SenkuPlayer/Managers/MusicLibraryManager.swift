@@ -306,11 +306,13 @@ class MusicLibraryManager: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
+            var loadedSongs: [Song] = []
+            
             // 1. Load song URLs from UserDefaults
             if let data = self.userDefaults.data(forKey: self.songsKey),
                let urls = try? JSONDecoder().decode([URL].self, from: data) {
                 
-                let loadedSongs: [Song] = urls.compactMap { url in
+                loadedSongs = urls.compactMap { (url: URL) -> Song? in
                     guard self.fileManager.fileExists(atPath: url.path) else { return nil }
                     return Song.fromURL(url)
                 }
@@ -322,11 +324,12 @@ class MusicLibraryManager: ObservableObject {
             }
             
             // 2. Scan Music directory for NEW files
-            self.scanMusicDirectoryAsync()
+            // Pass loadedSongs to avoid race condition with self.songs
+            self.scanMusicDirectoryAsync(existingSongs: loadedSongs)
         }
     }
     
-    private func scanMusicDirectoryAsync() {
+    private func scanMusicDirectoryAsync(existingSongs: [Song]? = nil) {
         guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
         
@@ -338,10 +341,13 @@ class MusicLibraryManager: ObservableObject {
         guard let files = try? fileManager.contentsOfDirectory(at: musicDirectory, includingPropertiesForKeys: nil) else { return }
         let mp3Files = files.filter { $0.pathExtension.lowercased() == "mp3" }
         
+        // Use provided list or current library
+        let referenceSongs = existingSongs ?? self.songs
+        
         var newSongs: [Song] = []
         for fileURL in mp3Files {
             // Use stable ID to check for duplicates
-            if !self.songs.contains(where: { $0.url.lastPathComponent == fileURL.lastPathComponent }) {
+            if !referenceSongs.contains(where: { $0.url.lastPathComponent == fileURL.lastPathComponent }) {
                 if let song = Song.fromURL(fileURL) {
                     newSongs.append(song)
                 }
