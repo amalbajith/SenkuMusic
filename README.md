@@ -1,116 +1,69 @@
-# SenkuPlayer - Local Music Player
+# SenkuPlayer - Premium Local Music Player
 
-A pixel-perfect Apple Music clone that plays local music files with full background playback support, multi-device sharing, and cross-platform compatibility (iOS & macOS).
+A pixel-perfect Apple Music clone designed for high-performance local music playback, seamless cross-device sharing, and advanced organization. Built with Swift and SwiftUI for iOS and macOS.
 
 ## ✨ Features
 
 ### 🍏 Cross-Platform Compatibility
-- **Universal App**: Run natively on both **iOS** and **macOS** with a single codebase.
-- **Platform-Aware UI**: Automatically adjusts layout and controls for iPad, iPhone, and Mac.
-- **macOS Optimization**: Supports window resizing, native menus, and Mac-specific file navigation.
+- **Universal App**: Native support for **iOS** (iPhone/iPad) and **macOS** with a consistent, premium interface.
+- **Platform-Aware UI**: Automatically adapts layouts for touch on iOS and precise mouse interaction on macOS.
+- **macOS Excellence**: Native window management, menu support, and optimized file navigation.
 
-### 📡 Nearby Share (AirDrop-style)
-- **Device-to-Device Sharing**: Send songs over the local network using Multipeer Connectivity.
-- **Cross-Device Support**: Share seamlessly between iPhone to iPhone, Mac to iPhone, or iPhone to Mac.
-- **Bulk Sharing**: Select multiple songs and send them all at once.
-- **Instant Importing**: Received songs are automatically added to the library and ready to play.
+### 📡 Nearby Share (Peer-to-Peer)
+- **Direct Song Sharing**: Send music directly between devices (iPhone ↔ iPhone, Mac ↔ iPhone) using Multipeer Connectivity.
+- **Bulk Transfers**: Share multiple tracks or entire custom selections simultaneously.
+- **Live Discovery**: Instant device discovery with secure invitation-based connection handling.
+- **Auto-Import**: Received tracks are immediately processed and organized into your library.
 
-### ❤️ Favorites & Playlists
-- **Persistent Favorites**: Mark songs as favorites and access them instantly.
-- **Custom Playlists**: Create, rename, and organize your music into collections.
-- **Bulk Actions**: Add multiple songs to playlists or favorites simultaneously.
+### ❤️ Smart Library & Playlists
+- **Persistent Favorites**: Swift-powered persistence keeps your favorite tracks available across sessions.
+- **Custom Playlists**: Create and manage unlimited playlists with easy song addition and removal.
+- **Advanced Metadata Engine**: Automated extraction of Song Title, Artist, Album, Year, and high-resolution Artwork using modern async/await patterns.
+- **Duplicate Prevention**: intelligent scanning ensures your library stays clean and free of duplicate entries.
 
 ### 🎨 Premium UI/UX
-- **Apple Music-Inspired Design**: Pixel-perfect recreation of the premium Apple Music interface.
-- **Adaptive Backgrounds**: Dynamic backgrounds that extract and match the dominant color of the album artwork.
-- **Interactive Mini Player**: Floating mini player that stays accessible across the entire app.
-- **Dark Mode Support**: Pure black theme for OLED screens.
-- **Fluid Animations**: High-performance spring animations and transitions.
+- **Apple Music Aesthetic**: High-fidelity recreation of the modern music experience.
+- **Adaptive Visuals**: Immersive backgrounds that dynamically extract colors from the current album art.
+- **Seamless Mini Player**: Always-accessible playback controls that float elegantly across the app.
+- **Dark Mode**: Optimized pure black theme for OLED displays and low-light environments.
+- **Interactive Animations**: Premium spring-based transitions and haptic feedback.
 
-### 🎵 Core Playback
-- **Local File Support**: Import and play MP3 files from any folder.
-- **Background Audio**: Keep the music going when the app is in the background or the screen is locked.
-- **Metadata Extraction**: High-fidelity extraction of Title, Artist, Album, and embedded Artwork.
-- **Shuffle & Repeat**: Smart playback modes (Off, All, One).
-- **Control Center Integration**: Full support for lock screen controls, headphones, and system playback commands.
+### 🎵 Pro Playback Engine
+- **Background Audio**: Robust support for lock screen, Dynamic Island, and background playback.
+- **Resource Efficient**: Metadata extraction is offloaded to background tasks to prevent UI hangs.
+- **Comprehensive Controls**: Full support for Shuffle, Repeat (One/All), and system remote commands (headphones, Control Center).
+- **Control Center Integration**: Native integration with system playback sliders and artwork display.
 
-## 📁 Project Structure
+## 🛠 Developer & Debugging (Easter Egg)
+SenkuPlayer includes a hidden suite of tools for power users and developers.
+1. Go to **Settings > About**.
+2. Tap the **Version** text **7 times**.
+3. A new **Developer** section will appear with:
+    - **Show File Extensions**: View raw filenames in lists for easier file management.
+    - **Disable Artwork Animation**: Optimize performance on older devices by disabling UI scaling.
+    - **Enable Console Logging**: View real-time metadata scanning logs in the debug console.
+    - **Force Vibrant UI**: Enforce colorful gradients even for files without artwork.
 
-```
-SenkuPlayer/
-├── Models/
-│   ├── Song.swift              # Song model with ID3 metadata extraction
-│   ├── Album.swift             # Album grouping model
-│   ├── Artist.swift            # Artist grouping model
-│   └── Playlist.swift          # User-created playlist model
-├── Managers/
-│   ├── AudioPlayerManager.swift    # AVFoundation-based audio engine
-│   ├── MusicLibraryManager.swift   # Library scanning and organization
-│   ├── FavoritesManager.swift      # Persistent favoriting system
-│   └── MultipeerManager.swift      # Nearby Share connectivity engine
-├── Utilities/
-│   └── PlatformExtensions.swift    # iOS/macOS compatibility layer
-├── Views/
-│   ├── LibraryView.swift          # Main library interface
-│   ├── SongsListView.swift        # Songs list with bulk selection & swipe actions
-│   ├── AlbumsListView.swift       # Albums grid and detail views
-│   ├── ArtistsListView.swift      # Artists list and detail views
-│   ├── PlaylistsListView.swift    # Playlists management
-│   ├── NowPlayingView.swift       # Full-screen immersive player
-│   ├── MiniPlayerView.swift       # Floating mini player
-│   ├── NearbyShareView.swift      # Device discovery and transfer UI
-│   ├── SettingsView.swift         # App settings and themes
-│   └── DocumentPicker.swift       # Native file/folder selection (iOS/macOS)
-└── SenkuPlayerApp.swift           # App entry point with audio session config
-```
+## 📁 Installation & Requirements
+- **iOS**: 17.0+
+- **macOS**: 14.0+ (Sonoma)
+- **Xcode**: 15.0+
 
-## 🛠 Setup & Requirements
+### macOS Permissions
+Ensure **Incoming/Outgoing Connections** are checked in the App Sandbox settings for Nearby Share functionality.
 
-### Technical Requirements
-- **iOS**: 17.0 or later
-- **macOS**: 14.0 or later (Sonoma)
-- **Xcode**: 15.0 or later
-- **Swift**: 5.9 or later
+## 🚀 Known Issues & Limitations
+- **Network Dependency**: Nearby Share requires devices to be in close proximity with Wi-Fi and Bluetooth enabled.
+- **Library Scan Time**: Extremely large folders (1000+ songs) may take a few seconds to fully process metadata on the first import.
+- **Metadata Limits**: Metadata extraction depends on the file's ID3 tags. Non-standard or corrupted tags may result in "Unknown Artist" labels.
 
-### Configuration (Mac Sandbox)
-For **Nearby Share** to work on macOS, you must enable network entitlements in Xcode:
-1. Select the **SenkuPlayer** target.
-2. Go to **Signing & Capabilities**.
-3. Under **App Sandbox**, check:
-   - [x] Incoming Connections (Server)
-   - [x] Outgoing Connections (Client)
-
-### Local Network Permissions (iOS)
-iOS will prompt for **Local Network** access the first time you use Nearby Share. Ensure this is granted to allow device discovery.
-
-## 🚀 How to Use
-
-### Importing Music
-1. Tap the **Add Folder** icon in the Library.
-2. Select any folder containing MP3 files.
-3. SenkuPlayer will recursively scan and organize them into Artists, Albums, and Songs.
-
-### Sharing Songs Nearby
-1. **From Library**: Swipe left on any song and tap the blue **Share** icon.
-2. **From Selection**: Tap **Select**, pick multiple songs, and tap **Send** in the top right.
-3. **From Player**: Tap the Share (Wave) icon in the Now Playing screen.
-4. The receiver must also be in the "Nearby" tab for discovery to work.
-
-## 🐛 Known Issues (Work in Progress)
-
-We are currently tracking a few high-priority items related to playlist and data consistency:
-- **Sync Latency**: Playlist song counts and Favorites status might sometimes show as 0 on the Library view immediately after app launch while the background scanner is initializing.
-- **Playback Handover**: Starting playback directly from a playlist detail view can occasionally fail if the underlying song metadata hasn't been fully resolved by the engine.
-- **Data Refresh**: In some cases, adding a song to a playlist requires navigating back and forth for the count to refresh in the main list.
-
-*These issues are being actively addressed in the upcoming v1.4.0 update.*
-
-## 📝 Troubleshooting
-
-- **Mac can't find iPhone**: Ensure both devices have Wi-Fi and Bluetooth ON. Check if the Mac Firewall or a VPN is blocking local connections.
-- **Music stops in background**: Verify that "Background Modes" (Audio) is enabled in Xcode Capabilities.
-- **Artwork not showing**: SenkuPlayer extracts artwork directly from the file's ID3 tags. If it's missing, try using a metadata editor like Mp3tag.
+## 📝 Changelog (v1.4.0)
+- **Resolved**: Fixed critical hang risk and priority inversion by migrating to async/await metadata loading.
+- **Fixed**: "Clear Library" now physically deletes files from local storage to prevent reappearing after restart.
+- **Added**: "Keep Screen Awake" toggle in Settings for stand/car usage.
+- **Added**: Hidden Developer Settings menu for advanced debugging.
+- **Updated**: Modernized screen dimension detection (deprecated `UIScreen.main` removed).
 
 ---
 **Developed by Amal**  
-*Building a premium community-driven music experience.*
+*The ultimate local music experience.*
