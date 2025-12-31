@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var multipeer = MultipeerManager.shared
     @AppStorage("darkMode") private var darkMode = false
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
+    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
 
     
     var body: some View {
@@ -28,16 +29,22 @@ struct ContentView: View {
                         Label("Home", systemImage: "house")
                     }
                 
-                PlaylistsListView(searchText: "")
-                    .tabItem {
-                        Label("Playlists", systemImage: "music.note.list")
-                    }
                 
                 NavigationStack {
-                    NearbyShareView(songs: [])
+                    PlaylistsListView(searchText: "")
                 }
                 .tabItem {
-                    Label("Nearby", systemImage: "wave.3.backward.circle.fill")
+                    Label("Playlists", systemImage: "music.note.list")
+                }
+                
+                // Hidden feature - only shown when dev mode is enabled
+                if devEnableDeviceTransfer {
+                    NavigationStack {
+                        NearbyShareView(songs: [])
+                    }
+                    .tabItem {
+                        Label("Transfer", systemImage: "arrow.left.arrow.right.circle.fill")
+                    }
                 }
                 
                 SettingsView()
@@ -76,7 +83,7 @@ struct ContentView: View {
                 multipeer.acceptInvitation()
             }
         } message: {
-            Text("'\(multipeer.invitationSenderName)' wants to connect with you to share music.")
+            Text("'\(multipeer.invitationSenderName)' wants to connect for device transfer.")
         }
         .onAppear {
             #if os(iOS)

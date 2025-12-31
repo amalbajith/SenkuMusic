@@ -23,9 +23,16 @@ struct SettingsView: View {
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
     @AppStorage("devEnableDebugLogging") private var devEnableDebugLogging = false
     @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
+    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
 
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
+    @State private var showDeviceTransferDisclaimer = false
+    @State private var showPasswordPrompt = false
+    @State private var passwordInput = ""
+    
+    // Dev mode password - change this to whatever you want
+    private let devPassword = "senku2025"
     
     var body: some View {
         NavigationStack {
@@ -147,12 +154,35 @@ struct SettingsView: View {
                         Toggle("Enable Console Logging", isOn: $devEnableDebugLogging)
                         Toggle("Force Vibrant UI", isOn: $devForceVibrantBackground)
                         
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        Text("EXPERIMENTAL FEATURES")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.bold)
+                        
+                        Toggle("Device Transfer Mode", isOn: $devEnableDeviceTransfer)
+                            .onChange(of: devEnableDeviceTransfer) { newValue in
+                                if newValue {
+                                    showDeviceTransferDisclaimer = true
+                                }
+                            }
+                        
+                        if devEnableDeviceTransfer {
+                            Text("⚠️ Only transfer music you own or have rights to share")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+                                .padding(.vertical, 4)
+                        }
+                        
                         Button(role: .destructive) {
                             // Reset all dev settings
                             devShowFileExtensions = false
                             devDisableArtworkAnimation = false
                             devEnableDebugLogging = false
                             devForceVibrantBackground = false
+                            devEnableDeviceTransfer = false
                         } label: {
                             Text("Reset Dev Settings")
                         }
@@ -207,6 +237,27 @@ struct SettingsView: View {
             } message: {
                 Text("This will remove all songs from your library. This action cannot be undone.")
             }
+            .alert("Legal Notice", isPresented: $showDeviceTransferDisclaimer) {
+                Button("I Understand") { }
+                Button("Disable", role: .cancel) {
+                    devEnableDeviceTransfer = false
+                }
+            } message: {
+                Text("Device Transfer Mode is intended for transferring music between your own devices.\n\n⚠️ Sharing copyrighted music without permission is illegal.\n\n✓ Only transfer music you own or have rights to share.\n✓ This feature is for personal use only.\n\nBy continuing, you agree to use this feature responsibly and legally.")
+            }
+            .alert("Developer Access", isPresented: $showPasswordPrompt) {
+                SecureField("Enter Password", text: $passwordInput)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Unlock") {
+                    verifyPassword()
+                }
+                Button("Cancel", role: .cancel) {
+                    passwordInput = ""
+                }
+            } message: {
+                Text("Enter the developer password to unlock advanced features.")
+            }
         }
         .preferredColorScheme(darkMode ? .dark : .light)
         .animation(.easeInOut(duration: 0.8), value: darkMode)
@@ -225,8 +276,22 @@ struct SettingsView: View {
         impact.impactOccurred()
         #endif
         
-        // Show developer section after 7 taps
+        // Show password prompt after 7 taps
         if versionTapCount >= 7 && !showDeveloperSection {
+            showPasswordPrompt = true
+            versionTapCount = 0
+        }
+        
+        // Reset counter after 2 seconds of inactivity
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if versionTapCount < 7 {
+                versionTapCount = 0
+            }
+        }
+    }
+    
+    private func verifyPassword() {
+        if passwordInput == devPassword {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                 showDeveloperSection = true
             }
@@ -237,15 +302,17 @@ struct SettingsView: View {
             notification.notificationOccurred(.success)
             #endif
             
-            // Reset counter
-            versionTapCount = 0
-        }
-        
-        // Reset counter after 2 seconds of inactivity
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            if versionTapCount < 7 {
-                versionTapCount = 0
-            }
+            showPasswordPrompt = false
+            passwordInput = ""
+        } else {
+            // Wrong password haptic
+            #if os(iOS)
+            let notification = UINotificationFeedbackGenerator()
+            notification.notificationOccurred(.error)
+            #endif
+            
+            // Shake animation would go here
+            passwordInput = ""
         }
     }
 }

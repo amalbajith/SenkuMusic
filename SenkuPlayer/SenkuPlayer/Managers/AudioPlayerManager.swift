@@ -248,6 +248,19 @@ class AudioPlayerManager: NSObject, ObservableObject {
         }
     }
     
+    func stop() {
+        player?.pause()
+        player = nil
+        isPlaying = false
+        currentSong = nil
+        currentTime = 0
+        duration = 0
+        queue = []
+        originalQueue = []
+        currentIndex = 0
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+    }
+    
     func playNext() {
         guard !queue.isEmpty else { return }
         

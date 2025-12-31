@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MiniPlayerView: View {
     @StateObject private var player = AudioPlayerManager.shared
+    @State private var dragOffset: CGFloat = 0
     
     var body: some View {
         if player.currentSong != nil {
@@ -102,6 +103,36 @@ struct MiniPlayerView: View {
 
             }
             .transition(.move(edge: .bottom).combined(with: .opacity))
+            .offset(x: dragOffset)
+            .opacity(1 - Double(min(abs(dragOffset) / 300, 0.8)))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 10)
+                    .onChanged { value in
+                        // Only allow leftward swipes
+                        if value.translation.width < 0 {
+                            dragOffset = value.translation.width
+                        }
+                    }
+                    .onEnded { value in
+                        if value.translation.width < -100 {
+                            // Dismiss threshold reached
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                dragOffset = -400
+                            }
+                            
+                            // Stop playback after animation
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                player.stop()
+                                dragOffset = 0
+                            }
+                        } else {
+                            // Snap back
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                dragOffset = 0
+                            }
+                        }
+                    }
+            )
             .sheet(isPresented: $player.isNowPlayingPresented) {
                 NowPlayingView()
             }

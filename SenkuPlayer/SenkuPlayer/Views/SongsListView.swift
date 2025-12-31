@@ -85,6 +85,9 @@ struct SongsListView: View {
                     }
                 }
                 .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
                 
                 if isSelectionMode {
                     selectionToolbar
@@ -152,6 +155,7 @@ struct SongsListView: View {
         }
         .padding()
         .background(Color.gray.opacity(0.12))
+        .padding(.bottom, player.currentSong != nil ? 80 : 0)
     }
     
     private func toggleSelection(_ id: UUID) {

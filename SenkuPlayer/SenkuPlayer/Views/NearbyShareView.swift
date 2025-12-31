@@ -15,7 +15,32 @@ struct NearbyShareView: View {
     @State private var sentToPeers: Set<MCPeerID> = []
     
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Legal Warning Banner
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.caption)
+                
+                Text("Personal Use Only • Transfer music you own or have rights to share")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.1))
+            .overlay(
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundColor(Color.orange.opacity(0.3)),
+                alignment: .bottom
+            )
+            
+            // Main Content
+            VStack {
             // Header / Animation
             VStack(spacing: 20) {
                 ZStack {
@@ -35,7 +60,7 @@ struct NearbyShareView: View {
                         .foregroundColor(.blue)
                 }
                 
-                Text(!songs.isEmpty ? "Looking for nearby friends..." : "Discoverable to others")
+                Text(!songs.isEmpty ? "Looking for your devices..." : "Discoverable to your devices")
                     .font(.headline)
                     .foregroundColor(.secondary)
             }
@@ -44,9 +69,9 @@ struct NearbyShareView: View {
             // List of Peers
             if multipeer.availablePeers.isEmpty {
                 Spacer()
-                Text("No one nearby found")
+                Text("No devices found")
                     .foregroundColor(.secondary)
-                Text("Make sure they have SenkuPlayer open")
+                Text("Make sure your other device has SenkuPlayer open")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -106,7 +131,7 @@ struct NearbyShareView: View {
             // Sharing Info (Only if sending)
             if !songs.isEmpty {
                 VStack(spacing: 8) {
-                    Text("Sharing \(songs.count) song\(songs.count == 1 ? "" : "s"):")
+                    Text("Transferring \(songs.count) song\(songs.count == 1 ? "" : "s"):")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -168,8 +193,9 @@ struct NearbyShareView: View {
                 }
                 .padding()
             }
-        }
-        .navigationTitle("Nearby Share")
+            } // End Main Content VStack
+        } // End Outer VStack
+        .navigationTitle("Device Transfer")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PlaylistsListView: View {
     @StateObject private var library = MusicLibraryManager.shared
+    @StateObject private var player = AudioPlayerManager.shared
     let searchText: String
     @State private var showingCreatePlaylist = false
     @State private var newPlaylistName = ""
@@ -45,8 +46,15 @@ struct PlaylistsListView: View {
                     .onDelete(perform: deletePlaylists)
                 }
                 .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
             }
         }
+        .navigationTitle("Playlists")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.large)
+        #endif
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button {
@@ -233,6 +241,9 @@ struct FavoritesDetailView: View {
                     }
                 }
                 .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
             }
         }
         #if os(iOS)
@@ -439,6 +450,9 @@ struct PlaylistDetailView: View {
                     .onMove(perform: moveSongs)
                 }
                 .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
             }
         }
         #if os(iOS)

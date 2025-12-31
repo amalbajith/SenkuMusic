@@ -1,0 +1,44 @@
+# Xcode
+*.xcuserstate
+*.xcuserdatad
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcarchive/
+*.ipa
+
+# Build artifacts
+ExportedIPA/
+ExportOptions.plist
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Internal documentation (not for public)
+LEGAL_PROTECTION.md
+DEV_MODE_GUIDE.md
+WARNINGS_DOCUMENTATION.md
+
+# Website (separate project)
+websittt/
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk

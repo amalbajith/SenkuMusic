@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ArtistsListView: View {
     @StateObject private var library = MusicLibraryManager.shared
+    @StateObject private var player = AudioPlayerManager.shared
     let searchText: String
     
     private var filteredArtists: [Artist] {
@@ -31,6 +32,9 @@ struct ArtistsListView: View {
                 }
             }
             .listStyle(.plain)
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+            }
         }
     }
 }
@@ -201,6 +205,9 @@ struct ArtistDetailView: View {
                 }
                 .padding(.bottom, 24)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
