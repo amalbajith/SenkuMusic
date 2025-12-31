@@ -2,7 +2,7 @@
 
 > A beautiful, premium local music player for iOS with advanced organization and seamless device synchronization.
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-iOS%2017.0%2B-lightgrey.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -122,14 +122,18 @@
 
 ## 📝 Changelog
 
-### Version 1.4.0 (Current)
-- ✅ Added password-protected Developer Mode
-- ✅ Implemented Device Transfer feature with legal disclaimers
-- ✅ Enhanced UI with warning banners for experimental features
-- ✅ Fixed metadata extraction using async/await
-- ✅ Improved "Clear Library" to physically delete files
-- ✅ Added "Keep Screen Awake" toggle
-- ✅ Modernized screen dimension detection
+### Version 1.5.0 (Current)
+- ✅ **Enhanced UI/UX** - Improved user interface and navigation
+- ✅ **Performance Improvements** - Optimized playback and library management
+- ✅ **Bug Fixes** - Various stability improvements
+- ✅ **Code Quality** - Better version control and development workflow
+- ✅ **Metadata Handling** - Improved song information extraction
+
+### Version 1.4.0
+- Fixed metadata extraction using async/await
+- Improved "Clear Library" to physically delete files
+- Added "Keep Screen Awake" toggle
+- Modernized screen dimension detection
 
 ### Version 1.3.0
 - Added custom playlists
