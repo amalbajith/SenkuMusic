@@ -22,6 +22,7 @@ struct NowPlayingView: View {
     // Developer Settings
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
     @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
+    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
 
 
     var body: some View {
@@ -95,17 +96,19 @@ struct NowPlayingView: View {
                     .foregroundColor(.primary)
             }
             
-            Button {
-                player.isNowPlayingPresented = false // Dismiss player to show share sheet
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.post(name: NSNotification.Name("ShowShareSheet"), object: player.currentSong)
+            if devEnableDeviceTransfer {
+                Button {
+                    player.isNowPlayingPresented = false // Dismiss player to show share sheet
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(name: NSNotification.Name("ShowShareSheet"), object: player.currentSong)
+                    }
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right.circle")
+                        .font(.title2)
+                        .foregroundColor(.primary)
                 }
-            } label: {
-                Image(systemName: "wave.3.backward.circle")
-                    .font(.title2)
-                    .foregroundColor(.primary)
+                .padding(.leading, 12)
             }
-            .padding(.leading, 12)
             
             Spacer()
             

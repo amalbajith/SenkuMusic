@@ -15,6 +15,7 @@ struct SongsListView: View {
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
     @State private var shareTarget: ShareTarget?
+    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
     
     struct ShareTarget: Identifiable {
         let id = UUID()
@@ -43,12 +44,14 @@ struct SongsListView: View {
                             }
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button {
-                                shareTarget = ShareTarget(songs: [song])
-                            } label: {
-                                Label("Share", systemImage: "wave.3.backward.circle.fill")
+                            if devEnableDeviceTransfer {
+                                Button {
+                                    shareTarget = ShareTarget(songs: [song])
+                                } label: {
+                                    Label("Transfer", systemImage: "arrow.left.arrow.right.circle.fill")
+                                }
+                                .tint(.blue)
                             }
-                            .tint(.blue)
                         }
                         .contextMenu {
                             Button {
@@ -95,7 +98,7 @@ struct SongsListView: View {
             }
         }
         .toolbar {
-            if !songs.isEmpty {
+            if !songs.isEmpty && devEnableDeviceTransfer {
                 ToolbarItem(placement: .automatic) {
                     Button(isSelectionMode ? (selectedSongs.isEmpty ? "Done" : "Send") : "Select") {
                         if isSelectionMode {
