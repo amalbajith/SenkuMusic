@@ -36,6 +36,11 @@ class MusicLibraryManager: ObservableObject {
     private let songsKey = "savedSongs"
     private let playlistsKey = "savedPlaylists"
     
+    private var songsFileURL: URL? {
+        guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        return documentsDirectory.appendingPathComponent("songs.json")
+    }
+    
     // MARK: - Initialization
     private init() {
         // Load partial data immediately for UI skeleton
@@ -336,10 +341,14 @@ class MusicLibraryManager: ObservableObject {
 
     // MARK: - Persistence
     private func saveSongs() {
-        // Only save URLs, not full Song objects (to avoid UserDefaults size limit)
+        guard let url = songsFileURL else { return }
+        // Only save URLs, not full Song objects
         let urls = songs.map { $0.url }
-        if let encoded = try? JSONEncoder().encode(urls) {
-            userDefaults.set(encoded, forKey: songsKey)
+        do {
+            let data = try JSONEncoder().encode(urls)
+            try data.write(to: url)
+        } catch {
+            print("❌ Failed to save songs list: \(error)")
         }
     }
     
@@ -355,22 +364,40 @@ class MusicLibraryManager: ObservableObject {
             
             var loadedSongs: [Song] = []
             
-            // 1. Load song URLs from UserDefaults
-            if let data = self.userDefaults.data(forKey: self.songsKey),
+            // 1. Load song URLs
+            var loadedURLs: [URL] = []
+            
+            // Try loading from JSON file first (new method)
+            if let url = self.songsFileURL,
+               let data = try? Data(contentsOf: url),
                let urls = try? JSONDecoder().decode([URL].self, from: data) {
-                
-                for url in urls {
-                    if self.fileManager.fileExists(atPath: url.path) {
-                        if let song = await Song.fromURL(url) {
-                            loadedSongs.append(song)
-                        }
+                loadedURLs = urls
+            }
+            // Migration: Check UserDefaults if file was empty/missing
+            else if let data = self.userDefaults.data(forKey: self.songsKey),
+                    let urls = try? JSONDecoder().decode([URL].self, from: data) {
+                print("🔄 Migrating library from UserDefaults to JSON file needed...")
+                loadedURLs = urls
+                // We will save to file at the end of this block implicitly by calling saveSongs() later if needed,
+                // but let's just flag that we loaded something.
+            }
+            
+            for url in loadedURLs {
+                if self.fileManager.fileExists(atPath: url.path) {
+                    if let song = await Song.fromURL(url) {
+                        loadedSongs.append(song)
                     }
                 }
+            }
+            
+            await MainActor.run {
+                self.songs = loadedSongs
+                self.organizeLibrary()
+                // Save to new format to complete migration if needed
+                self.saveSongs()
                 
-                await MainActor.run {
-                    self.songs = loadedSongs
-                    self.organizeLibrary()
-                }
+                // Optional: Clear old UserDefaults key after successful load & save?
+                // self.userDefaults.removeObject(forKey: self.songsKey)
             }
             
             // 2. Scan Music directory for NEW files

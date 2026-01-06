@@ -226,18 +226,23 @@ class AudioPlayerManager: NSObject, ObservableObject {
         
         // Update Now Playing Info
         updateNowPlayingInfo()
+        
+        // Update Widget
+        WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: isPlaying)
     }
     
     func play() {
         player?.play()
         isPlaying = true
         updateNowPlayingInfo()
+        WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: isPlaying)
     }
     
     func pause() {
         player?.pause()
         isPlaying = false
         updateNowPlayingInfo()
+        WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: isPlaying)
     }
     
     func togglePlayPause() {
@@ -259,6 +264,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         originalQueue = []
         currentIndex = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        WidgetUpdateManager.shared.update(currentSong: nil, isPlaying: false)
     }
     
     func playNext() {
