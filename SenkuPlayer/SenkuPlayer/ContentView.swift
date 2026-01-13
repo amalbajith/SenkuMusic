@@ -37,6 +37,7 @@ struct ContentView: View {
                     Label("Playlists", systemImage: "music.note.list")
                 }
                 
+
                 // Hidden feature - only shown when dev mode is enabled
                 if devEnableDeviceTransfer {
                     NavigationStack {

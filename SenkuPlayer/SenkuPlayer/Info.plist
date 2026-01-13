@@ -12,6 +12,7 @@
 	<string>Aura needs access to the local network to share songs with nearby friends.</string>
 	<key>NSBonjourServices</key>
 	<array>
+	
 		<string>_senku-share._tcp</string>
 		<string>_senku-share._udp</string>
 	</array>

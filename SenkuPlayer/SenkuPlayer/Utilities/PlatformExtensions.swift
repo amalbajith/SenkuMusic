@@ -27,6 +27,14 @@ extension PlatformColor {
         return .secondarySystemBackground
         #endif
     }
+    
+    static var tertiaryBackground: PlatformColor {
+        #if os(macOS)
+        return .controlBackgroundColor
+        #else
+        return .tertiarySystemBackground
+        #endif
+    }
 }
 
 // MARK: - Image View Extension

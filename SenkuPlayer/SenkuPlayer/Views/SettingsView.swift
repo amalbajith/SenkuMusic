@@ -17,6 +17,9 @@ struct SettingsView: View {
     @State private var showingClearLibraryAlert = false
     @AppStorage("darkMode") private var darkMode = false
     @AppStorage("keepScreenAwake") private var keepScreenAwake = false
+    @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
+    @AppStorage("gaplessPlayback") private var gaplessPlayback: Bool = true
+
     
     // Developer Settings
     @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
@@ -72,6 +75,46 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance")
                 }
+                
+                // Audio Section
+                Section {
+                    NavigationLink(destination: EqualizerView()) {
+                        Label {
+                            Text("Equalizer")
+                        } icon: {
+                            Image(systemName: "slider.vertical.3")
+                                .foregroundColor(.green)
+                        }
+                    }
+                    
+                    Toggle(isOn: $gaplessPlayback) {
+                        Label {
+                            Text("Gapless Playback")
+                        } icon: {
+                            Image(systemName: "arrow.triangle.merge")
+                                .foregroundColor(.purple)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading) {
+                        HStack {
+                            Image(systemName: "arrow.left.and.right.square.fill")
+                                .foregroundColor(.blue)
+                            Text("Crossfade")
+                            Spacer()
+                            Text(crossfadeDuration == 0 ? "Off" : String(format: "%.1fs", crossfadeDuration))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                    }
+                    .padding(.vertical, 4)
+                    
+                } header: {
+                    Text("Audio & Playback")
+                }
+                
+
                 
                 // Library Section
                 Section {
@@ -163,7 +206,7 @@ struct SettingsView: View {
                             .fontWeight(.bold)
                         
                         Toggle("Device Transfer Mode", isOn: $devEnableDeviceTransfer)
-                            .onChange(of: devEnableDeviceTransfer) { newValue in
+                            .onChange(of: devEnableDeviceTransfer) { _, newValue in
                                 if newValue {
                                     showDeviceTransferDisclaimer = true
                                 }

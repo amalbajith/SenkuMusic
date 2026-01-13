@@ -45,7 +45,7 @@ struct Song: Identifiable, Codable, Equatable {
 // MARK: - Metadata Extraction
 extension Song {
     static func fromURL(_ url: URL) async -> Song? {
-        let asset = AVAsset(url: url)
+        let asset = AVURLAsset(url: url)
 
         var title = url.deletingPathExtension().lastPathComponent
         var artist = "Unknown Artist"
@@ -76,19 +76,24 @@ extension Song {
 
         for item in commonMetadata {
             guard let key = item.commonKey?.rawValue else { continue }
-            switch key {
-            case "title":
-                if let titleValue = item.stringValue { title = titleValue }
-            case "artist":
-                if let artistValue = item.stringValue { artist = artistValue }
-            case "albumName":
-                if let albumValue = item.stringValue { album = albumValue }
-            case "type":
-                if let genreValue = item.stringValue { genre = genreValue }
-            case "artwork":
-                if let data = item.dataValue { artworkData = data }
-            default:
-                break
+            
+            do {
+                switch key {
+                case "title":
+                    if let value = try await item.load(.stringValue) { title = value }
+                case "artist":
+                    if let value = try await item.load(.stringValue) { artist = value }
+                case "albumName":
+                    if let value = try await item.load(.stringValue) { album = value }
+                case "type":
+                    if let value = try await item.load(.stringValue) { genre = value }
+                case "artwork":
+                    if let value = try await item.load(.dataValue) { artworkData = value }
+                default:
+                    break
+                }
+            } catch {
+                print("Error loading metadata for \(key): \(error)")
             }
         }
 
@@ -114,19 +119,19 @@ extension Song {
                 if let keyString = (item.key as? String) ?? item.identifier?.rawValue {
                     switch keyString {
                     case "TPE2", "©ART": // Album Artist
-                        if let value = item.stringValue { albumArtist = value }
+                        if let value = try? await item.load(.stringValue) { albumArtist = value }
                     case "TDRC", "©day": // Year
-                        if let value = item.stringValue {
+                        if let value = try? await item.load(.stringValue) {
                             let yearString = value.prefix(4)
                             year = Int(yearString)
                         }
                     case "TRCK": // Track Number
-                        if let value = item.stringValue {
+                        if let value = try? await item.load(.stringValue) {
                             let components = value.split(separator: "/")
                             if let first = components.first { trackNumber = Int(first) }
                         }
                     case "TPOS": // Disc Number
-                        if let value = item.stringValue {
+                        if let value = try? await item.load(.stringValue) {
                             let components = value.split(separator: "/")
                             if let first = components.first { discNumber = Int(first) }
                         }
@@ -175,7 +180,7 @@ private extension String {
     
     func hashString() -> String {
         let data = Data(self.utf8)
-        var hash = ""
+
         // Simple hash to get a hex string
         var h: UInt64 = 5381
         for byte in data {

@@ -65,58 +65,44 @@ struct SenkuWidgetEntryView : View {
 
 // MARK: - Widget Views
 
+// MARK: - Widget Views
+
+// MARK: - Widget Views
+
 struct SmallWidgetView: View {
     var entry: Provider.Entry
     
     var body: some View {
-        ZStack {
-            // Background
-            GeometryReader { geometry in
-                if let artworkData = entry.data.artworkData, let uiImage = UIImage(data: artworkData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .overlay(Color.black.opacity(0.4))
-                } else {
-                    Color(UIColor.systemGray6)
-                        .overlay(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.3)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+        // CONTENT ONLY (Background moved to containerBackground)
+        VStack(alignment: .leading, spacing: 2) {
+            // Status Indicator (Top)
+            HStack {
+                Spacer()
+                if entry.data.isPlaying {
+                    Image(systemName: "waveform")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
             }
             
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
-                Spacer()
-                
-                HStack {
-                    if entry.data.isPlaying {
-                        Image(systemName: "waveform")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                    }
-                    Spacer()
-                }
-                
-                Text(entry.data.title)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                
-                Text(entry.data.artist)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white.opacity(0.8))
-                    .lineLimit(1)
-            }
-            .padding()
+            Spacer()
+            
+            // Text Info
+            Text(entry.data.title)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .lineLimit(1)
+            
+            Text(entry.data.artist)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.8))
+                .lineLimit(1)
         }
+        .padding(14)
+        .widgetBackground(entry.data) // Apply background helper
     }
 }
 
@@ -124,61 +110,92 @@ struct MediumWidgetView: View {
     var entry: Provider.Entry
     
     var body: some View {
-        HStack(spacing: 0) {
-            // Artwork
-            GeometryReader { geometry in
+        GeometryReader { geo in
+            // CONTENT ONLY
+            HStack(spacing: 16) {
+                // Artwork Box
                 if let artworkData = entry.data.artworkData, let uiImage = UIImage(data: artworkData) {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipped()
+                        .frame(width: geo.size.height - 32, height: geo.size.height - 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
                 } else {
-                    Color(UIColor.systemGray5)
-                        .overlay(
-                            Image(systemName: "music.note")
-                                .font(.largeTitle)
-                                .foregroundColor(.gray)
-                        )
+                    Image(systemName: "music.note")
+                        .font(.largeTitle)
+                        .frame(width: geo.size.height - 32, height: geo.size.height - 32)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
-            }
-            .frame(width: 120)
-            
-            // Info
-            VStack(alignment: .leading, spacing: 6) {
-                if entry.data.isPlaying {
-                    HStack {
-                        Image(systemName: "waveform")
-                            .foregroundColor(.accentColor)
-                        Text("Now Playing")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
+                
+                // Info Column
+                VStack(alignment: .leading, spacing: 4) {
+                    if entry.data.isPlaying {
+                        Label("Now Playing", systemImage: "beats.headphones")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white.opacity(0.8))
+                            .textCase(.uppercase)
+                            .padding(.bottom, 2)
+                    }
+                    
+                    Text(entry.data.title)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text(entry.data.artist)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                        .lineLimit(1)
+                    
+                    if !entry.data.album.isEmpty {
+                        Text(entry.data.album)
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                            .padding(.top, 2)
                     }
                 }
-                
-                Spacer()
-                
-                Text(entry.data.title)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .lineLimit(2)
-                
-                Text(entry.data.artist)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                Text(entry.data.album)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
                 Spacer()
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.systemBackground))
+            .padding(16)
+        }
+        .widgetBackground(entry.data)
+    }
+}
+
+// Helper to apply background conditionally based on iOS version
+extension View {
+    func widgetBackground(_ data: WidgetData) -> some View {
+        if #available(iOS 17.0, *) {
+            return containerBackground(for: .widget) {
+                WidgetBackgroundView(data: data)
+            }
+        } else {
+            return background(WidgetBackgroundView(data: data))
+        }
+    }
+}
+
+struct WidgetBackgroundView: View {
+    let data: WidgetData
+    
+    var body: some View {
+        ZStack {
+            if let artworkData = data.artworkData, let uiImage = UIImage(data: artworkData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .blur(radius: 40)
+                    .overlay(Color.black.opacity(0.4))
+            } else {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color(UIColor.systemIndigo), Color(UIColor.systemPurple)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         }
     }
 }

@@ -29,62 +29,16 @@ struct SongsListView: View {
             } else {
                 List {
                     ForEach(songs) { song in
-                        SongRow(
+                        SongCell(
                             song: song,
-                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
-                            isSelected: selectedSongs.contains(song.id),
-                            isSelectionMode: isSelectionMode
+                            player: player,
+                            selectedSongs: $selectedSongs,
+                            isSelectionMode: $isSelectionMode,
+                            showingPlaylistPicker: $showingPlaylistPicker,
+                            shareTarget: $shareTarget,
+                            devEnableDeviceTransfer: devEnableDeviceTransfer,
+                            playAction: playSong
                         )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if isSelectionMode {
-                                toggleSelection(song.id)
-                            } else {
-                                playSong(song)
-                            }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            if devEnableDeviceTransfer {
-                                Button {
-                                    shareTarget = ShareTarget(songs: [song])
-                                } label: {
-                                    Label("Transfer", systemImage: "arrow.left.arrow.right.circle.fill")
-                                }
-                                .tint(.blue)
-                            }
-                        }
-                        .contextMenu {
-                            Button {
-                                player.playNext(song)
-                            } label: {
-                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
-                            }
-                            
-                            Button {
-                                player.playLater(song)
-                            } label: {
-                                Label("Play Last", systemImage: "text.line.last.and.arrowtriangle.forward")
-                            }
-                            
-                            Divider()
-                            
-                            Button {
-                                FavoritesManager.shared.toggleFavorite(song: song)
-                            } label: {
-                                let isFav = FavoritesManager.shared.isFavorite(song: song)
-                                Label(isFav ? "Remove from Favorites" : "Favorite", 
-                                      systemImage: isFav ? "heart.slash.fill" : "heart")
-                            }
-                            
-                            Button {
-                                selectedSongs = [song.id]
-                                showingPlaylistPicker = true
-                            } label: {
-                                Label("Add to a Playlist...", systemImage: "music.note.list")
-                            }
-                        } preview: {
-                            SongPreviewView(song: song)
-                        }
                     }
                 }
                 .listStyle(.plain)
@@ -176,146 +130,226 @@ struct SongsListView: View {
     }
 }
 
-// MARK: - Song Row
-struct SongRow: View {
-    let song: Song
-    let isPlaying: Bool
-    let isSelected: Bool
-    let isSelectionMode: Bool
-    
-    @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            if isSelectionMode {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .blue : .gray)
-                    .font(.title3)
-            }
+struct SongCell: View {
+            let song: Song
+            @ObservedObject var player: AudioPlayerManager
+            @Binding var selectedSongs: Set<UUID>
+            @Binding var isSelectionMode: Bool
+            @Binding var showingPlaylistPicker: Bool
+            @Binding var shareTarget: SongsListView.ShareTarget?
+            let devEnableDeviceTransfer: Bool
+            // We need to pass the list of songs for context, or a closure.
+            // Closure is cleaner.
+            let playAction: (Song) -> Void
             
-            // Artwork
-            if let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 50)
-                    .cornerRadius(8)
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .foregroundColor(.gray)
+            var body: some View {
+                SongRow(
+                    song: song,
+                    isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                    isSelected: selectedSongs.contains(song.id),
+                    isSelectionMode: isSelectionMode
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if isSelectionMode {
+                        toggleSelection(song.id)
+                    } else {
+                        playAction(song)
                     }
-            }
-            
-            // Song Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(devShowFileExtensions ? song.url.lastPathComponent : song.title)
-                    .font(.body)
-                    .foregroundColor(isPlaying ? .blue : .primary)
-                    .lineLimit(1)
-                
-                Text(song.artist)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-
-            
-            Spacer()
-            
-            // Playing Indicator
-            if isPlaying && !isSelectionMode {
-                Image(systemName: "waveform")
-                    .foregroundColor(.blue)
-                    .symbolEffect(.variableColor.iterative)
-            } else {
-                Text(formatDuration(song.duration))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-}
-
-
-// MARK: - Song Preview View
-struct SongPreviewView: View {
-    let song: Song
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 250, height: 250)
-                    .cornerRadius(12)
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(width: 250, height: 250)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if devEnableDeviceTransfer {
+                        Button {
+                            shareTarget = SongsListView.ShareTarget(songs: [song])
+                        } label: {
+                            Label("Transfer", systemImage: "arrow.left.arrow.right.circle.fill")
+                        }
+                        .tint(.blue)
                     }
+                }
+                .contextMenu {
+                    Button {
+                        player.playNext(song)
+                    } label: {
+                        Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                    }
+                    
+                    Button {
+                        player.playLater(song)
+                    } label: {
+                        Label("Play Last", systemImage: "text.line.last.and.arrowtriangle.forward")
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        FavoritesManager.shared.toggleFavorite(song: song)
+                    } label: {
+                        let isFav = FavoritesManager.shared.isFavorite(song: song)
+                        Label(isFav ? "Remove from Favorites" : "Favorite",
+                              systemImage: isFav ? "heart.slash.fill" : "heart")
+                    }
+                    
+                    Button {
+                        selectedSongs = [song.id]
+                        showingPlaylistPicker = true
+                    } label: {
+                        Label("Add to a Playlist...", systemImage: "music.note.list")
+                    }
+                } preview: {
+                    SongPreviewView(song: song)
+                }
             }
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(song.title)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                Text(song.artist)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                
-                Text(song.album)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+            private func toggleSelection(_ id: UUID) {
+                if selectedSongs.contains(id) {
+                    selectedSongs.remove(id)
+                } else {
+                    selectedSongs.insert(id)
+                }
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 8)
         }
-        .padding(16)
-        .background(Color(platformColor: .secondaryBackground))
-    }
-}
-
-// MARK: - Empty Library View
-struct EmptyLibraryView: View {
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "music.note.list")
-                .font(.system(size: 60))
-                .foregroundColor(.gray)
+        
+        // MARK: - Song Row
+        struct SongRow: View {
+            let song: Song
+            let isPlaying: Bool
+            let isSelected: Bool
+            let isSelectionMode: Bool
             
-            Text("No Songs")
-                .font(.title2)
-                .fontWeight(.semibold)
+            @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
             
-            Text("Add music files to get started")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            var body: some View {
+                HStack(spacing: 12) {
+                    if isSelectionMode {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(isSelected ? .blue : .gray)
+                            .font(.title3)
+                    }
+                    
+                    // Artwork
+                    if let artworkData = song.artworkData,
+                       let platformImage = PlatformImage.fromData(artworkData) {
+                        Image(platformImage: platformImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 50, height: 50)
+                            .cornerRadius(8)
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.1))
+                            .frame(width: 50, height: 50)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .foregroundColor(.gray)
+                            }
+                    }
+                    
+                    // Song Info
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(devShowFileExtensions ? song.url.lastPathComponent : song.title)
+                            .font(.body)
+                            .foregroundColor(isPlaying ? .blue : .primary)
+                            .lineLimit(1)
+                        
+                        Text(song.artist)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    
+                    
+                    Spacer()
+                    
+                    // Playing Indicator
+                    if isPlaying && !isSelectionMode {
+                        Image(systemName: "waveform")
+                            .foregroundColor(.blue)
+                            .symbolEffect(.variableColor.iterative)
+                    } else {
+                        Text(formatDuration(song.duration))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            
+            private func formatDuration(_ duration: TimeInterval) -> String {
+                let minutes = Int(duration) / 60
+                let seconds = Int(duration) % 60
+                return String(format: "%d:%02d", minutes, seconds)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
+        
+        
+        // MARK: - Song Preview View
+        struct SongPreviewView: View {
+            let song: Song
+            
+            var body: some View {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let artworkData = song.artworkData,
+                       let platformImage = PlatformImage.fromData(artworkData) {
+                        Image(platformImage: platformImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 250, height: 250)
+                            .cornerRadius(12)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.1))
+                            .frame(width: 250, height: 250)
+                            .overlay {
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.gray)
+                            }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(song.title)
+                            .font(.headline)
+                            .lineLimit(1)
+                        
+                        Text(song.artist)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        
+                        Text(song.album)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 8)
+                }
+                .padding(16)
+                .background(Color(platformColor: .secondaryBackground))
+            }
+        }
+        
+        // MARK: - Empty Library View
+        struct EmptyLibraryView: View {
+            var body: some View {
+                VStack(spacing: 20) {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    
+                    Text("No Songs")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    
+                    Text("Add music files to get started")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        
 #Preview {
     NavigationStack {
         SongsListView(songs: [], searchText: "")
