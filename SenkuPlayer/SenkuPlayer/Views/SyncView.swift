@@ -45,7 +45,7 @@ struct SyncView: View {
                         }
                         .padding(.top, 40)
                         
-                        Text(multipeer.isReceiving ? "Receiving Library..." : (multipeer.isSending ? "Sending Library..." : syncStatus))
+                        Text((multipeer.isSending || multipeer.isReceiving) && !multipeer.syncDetails.isEmpty ? multipeer.syncDetails : syncStatus)
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)

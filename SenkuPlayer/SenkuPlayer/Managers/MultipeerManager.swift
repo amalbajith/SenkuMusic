@@ -28,6 +28,7 @@ class MultipeerManager: NSObject, ObservableObject {
     private var activeTransferCount = 0 {
         didSet { isSending = activeTransferCount > 0 }
     }
+    @Published var syncDetails: String = ""
     @Published var transferProgress: Double = 0
     
     // Track connecting peers
@@ -77,7 +78,10 @@ class MultipeerManager: NSObject, ObservableObject {
         }
         
         print("📤 Starting send to \(peer.displayName): \(url.lastPathComponent)")
-        DispatchQueue.main.async { self.activeTransferCount += 1 }
+        DispatchQueue.main.async { 
+            self.activeTransferCount += 1 
+            self.syncDetails = "Sending: \(url.lastPathComponent.replacingOccurrences(of: ".mp3", with: ""))"
+        }
         
         session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { [weak self] error in
             DispatchQueue.main.async {
@@ -232,6 +236,7 @@ extension MultipeerManager: MCSessionDelegate {
     func session(_ session: MCSession, didStartReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, with progress: Progress) {
         DispatchQueue.main.async {
             self.isReceiving = true
+            self.syncDetails = "Receiving: \(resourceName)"
             print("Started receiving: \(resourceName) from \(peerID.displayName)")
         }
     }
@@ -239,6 +244,7 @@ extension MultipeerManager: MCSessionDelegate {
     func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) {
         DispatchQueue.main.async {
             self.isReceiving = false
+            self.syncDetails = "Received: \(resourceName)"
             
             if let error = error {
                 print("Error receiving file: \(error.localizedDescription)")
