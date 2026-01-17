@@ -50,7 +50,8 @@ class MusicLibraryManager: ObservableObject {
                 let access = url.startAccessingSecurityScopedResource()
                 defer { if access { url.stopAccessingSecurityScopedResource() } }
                 
-                if url.pathExtension.lowercased() == "mp3" {
+                let allowedExtensions = ["mp3", "m4a", "wav", "aac", "flac", "aiff"]
+                if allowedExtensions.contains(url.pathExtension.lowercased()) {
                     let dest = musicDir.appendingPathComponent(url.lastPathComponent)
                     if !self.fileManager.fileExists(atPath: dest.path) {
                         try? self.fileManager.copyItem(at: url, to: dest)

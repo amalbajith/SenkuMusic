@@ -90,7 +90,7 @@ struct MacOSLayout: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .onDrop(of: [.audio, .fileURL], isTargeted: nil) { providers in
+                .onDrop(of: [.fileURL], isTargeted: nil) { providers in
                     Task {
                         var urls: [URL] = []
                         for provider in providers {
