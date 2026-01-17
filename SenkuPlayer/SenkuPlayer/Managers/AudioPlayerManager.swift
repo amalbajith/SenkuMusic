@@ -109,10 +109,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         self.originalQueue = queue
         self.currentIndex = index
         
-        // Open the Now Playing view automatically when a song is selected (Spotify-style)
-        DispatchQueue.main.async {
-            self.isNowPlayingPresented = true
-        }
+
         
         startPlayback(with: song)
     }
