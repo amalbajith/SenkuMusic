@@ -181,9 +181,10 @@ struct NowPlayingView: View {
             .frame(width: size, height: size)
             .onAppear {
                 glowPulse = true
-                // Continuous slow rotation
-                withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
-                    rotation = 360
+                // Static 45 degree angle (Edge Center) with subtle floating effect
+                rotation = -45
+                withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
+                    rotation = -40 // Vary slightly between -45 and -40 (or -50)
                 }
             }
         }
@@ -210,12 +211,12 @@ struct NowPlayingView: View {
             .overlay(
                 // Shine/Reflection effect
                 LinearGradient(
-                    colors: [.white.opacity(0.2), .clear, .black.opacity(0.3)],
+                    colors: [.white.opacity(0.1), .clear, .black.opacity(0.4)], // Enhanced shading for 3D depth
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            .border(Color.white.opacity(0.1), width: 0.5) // Subtle edge
+            .border(Color.white.opacity(0.1), width: 0.5)
             .rotation3DEffect(
                 .degrees(angle),
                 axis: (x: 0, y: 1, z: 0),
