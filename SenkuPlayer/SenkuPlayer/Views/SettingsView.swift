@@ -130,16 +130,7 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 
-                NavigationLink(destination: DownloadView()) {
-                    SettingsNavigationRow(
-                        icon: "arrow.down.circle.fill",
-                        iconColor: .white,
-                        title: "Download Music"
-                    )
-                }
-                .buttonStyle(.plain)
-                
-                
+
                 SettingsToggleRow(
                     icon: "arrow.triangle.merge",
                     iconColor: .white,

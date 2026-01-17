@@ -12,13 +12,7 @@ struct SongsListView: View {
     @State private var selectedSongs: Set<UUID> = []
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
-    @State private var shareTarget: ShareTarget?
-    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
-    
-    struct ShareTarget: Identifiable {
-        let id = UUID()
-        let songs: [Song]
-    }
+
     
     var body: some View {
         ZStack {
@@ -105,19 +99,12 @@ struct SongsListView: View {
             #endif
         }
         .toolbar {
-            if !songs.isEmpty && devEnableDeviceTransfer {
+            if !songs.isEmpty {
                 ToolbarItem(placement: .automatic) {
-                    Button(isSelectionMode ? (selectedSongs.isEmpty ? "Done" : "Send") : "Select") {
-                        if isSelectionMode {
-                            if !selectedSongs.isEmpty {
-                                let selected = songs.filter { selectedSongs.contains($0.id) }
-                                shareTarget = ShareTarget(songs: selected)
-                            } else {
-                                isSelectionMode = false
-                                selectedSongs.removeAll()
-                            }
-                        } else {
-                            isSelectionMode = true
+                    Button(isSelectionMode ? "Done" : "Select") {
+                        isSelectionMode.toggle()
+                        if !isSelectionMode {
+                            selectedSongs.removeAll()
                         }
                     }
                 }
@@ -131,21 +118,7 @@ struct SongsListView: View {
         }) {
             PlaylistPickerView(songIDs: Array(selectedSongs))
         }
-        .sheet(item: $shareTarget, onDismiss: {
-            if isSelectionMode {
-                isSelectionMode = false
-                selectedSongs.removeAll()
-            }
-        }) { target in
-            NavigationStack {
-                NearbyShareView(songs: target.songs)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowShareSheet"))) { notification in
-            if let song = notification.object as? Song {
-                shareTarget = ShareTarget(songs: [song])
-            }
-        }
+
         .preferredColorScheme(.dark)
     }
 
