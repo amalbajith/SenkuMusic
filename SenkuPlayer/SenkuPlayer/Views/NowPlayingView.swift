@@ -23,7 +23,7 @@ struct NowPlayingView: View {
     // Developer Settings
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
     @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
-    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
+
 
     var body: some View {
         ZStack {
@@ -107,28 +107,11 @@ struct NowPlayingView: View {
             
             Spacer()
             
-            if devEnableDeviceTransfer {
-                Button {
-                    player.showingShareRadar = true
-                } label: {
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Color.white.opacity(0.1))
-                        .glassmorphism(cornerRadius: 22)
-                }
-            } else {
-                // Buffer to keep title centered
-                Color.clear.frame(width: 44, height: 44)
-            }
+            // Buffer to keep title centered
+            Color.clear.frame(width: 44, height: 44)
         }
         .padding(.horizontal, 24)
-        .sheet(isPresented: $player.showingShareRadar) {
-            if let song = player.currentSong {
-                NearbyShareView(songs: [song])
-            }
-        }
+
     }
     
     // MARK: - Album Artwork

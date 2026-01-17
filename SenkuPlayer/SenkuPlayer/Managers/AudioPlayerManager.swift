@@ -17,7 +17,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published var isShuffled = false
     @Published var isNowPlayingPresented = false
-    @Published var showingShareRadar = false
+
     
     @Published var activeEqualizerProfile: EqualizerProfile = EqualizerProfile.defaultProfile()
     @Published var isAutoMixEnabled: Bool = false
