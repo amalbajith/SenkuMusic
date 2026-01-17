@@ -103,6 +103,94 @@ class MultipeerManager: NSObject, ObservableObject {
 }
 
 
+// MARK: - Sync Models
+struct SongIdentity: Codable, Hashable {
+    let title: String
+    let artist: String
+}
+
+struct SyncMessage: Codable {
+    enum Kind: String, Codable {
+        case catalog
+        case request
+    }
+    let kind: Kind
+    let items: [SongIdentity]
+}
+
+extension MultipeerManager {
+    func startSmartSync() {
+        Task { @MainActor in
+            let songs = MusicLibraryManager.shared.songs
+            let catalog = songs.map { SongIdentity(title: $0.title, artist: $0.artist) }
+            let message = SyncMessage(kind: .catalog, items: catalog)
+            
+            if let data = try? JSONEncoder().encode(message),
+               let peer = connectedPeers.first {
+                try? session.send(data, toPeers: [peer], with: .reliable)
+                print("🔄 Sent catalog with \(catalog.count) items to \(peer.displayName)")
+            }
+        }
+    }
+    
+    private func handleData(_ data: Data, from peerID: MCPeerID) {
+        guard let message = try? JSONDecoder().decode(SyncMessage.self, from: data) else { return }
+        
+        Task { @MainActor in
+            let localSongs = MusicLibraryManager.shared.songs
+            
+            switch message.kind {
+            case .catalog:
+                print("📥 Received catalog from \(peerID.displayName)")
+                // Compare catalogs
+                let remoteSet = Set(message.items)
+                let localSet = Set(localSongs.map { SongIdentity(title: $0.title, artist: $0.artist) })
+                
+                // 1. Identify what Peer LACKS (I have, Peer doesn't) -> SEND
+                let toSend = localSongs.filter {
+                    !remoteSet.contains(SongIdentity(title: $0.title, artist: $0.artist))
+                }
+                
+                // 2. Identify what I LACK (Peer has, I don't) -> REQUEST
+                let toRequest = message.items.filter { !localSet.contains($0) }
+                
+                print("Calculated: Sending \(toSend.count), Requesting \(toRequest.count)")
+                
+                // Send Request
+                if !toRequest.isEmpty {
+                    let reqMsg = SyncMessage(kind: .request, items: toRequest)
+                    if let reqData = try? JSONEncoder().encode(reqMsg) {
+                        try? session.send(reqData, toPeers: [peerID], with: .reliable)
+                    }
+                }
+                
+                // Send Files (Async Task)
+                Task.detached {
+                    for song in toSend {
+                        self.sendSong(song.url, to: peerID)
+                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s throttle
+                    }
+                }
+                
+            case .request:
+                print("📥 Received request for \(message.items.count) songs")
+                // Peer wants these songs
+                let requestedSet = Set(message.items)
+                let songsToSend = localSongs.filter {
+                    requestedSet.contains(SongIdentity(title: $0.title, artist: $0.artist))
+                }
+                
+                Task.detached {
+                    for song in songsToSend {
+                        self.sendSong(song.url, to: peerID)
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - MCSessionDelegate
 extension MultipeerManager: MCSessionDelegate {
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
@@ -131,7 +219,7 @@ extension MultipeerManager: MCSessionDelegate {
     }
     
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        // Handle small data packets if needed
+        handleData(data, from: peerID)
     }
     
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) {

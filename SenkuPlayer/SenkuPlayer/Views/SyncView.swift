@@ -174,49 +174,20 @@ struct SyncView: View {
             return
         }
         
-        // Prevent multiple syncs
-        guard !isSyncing else { 
-            isSyncing = false
-            syncStatus = "Sync Cancelled"
-            return
-        }
-        
-        let songs = MusicLibraryManager.shared.songs
-        guard !songs.isEmpty else {
-            syncStatus = "Library is empty"
-            return
-        }
+        // Prevent multiple syncs (UI protection)
+        guard !isSyncing else { return }
         
         isSyncing = true
-        syncStatus = "Sending \(songs.count) songs..."
-        progress = 0
+        syncStatus = "Proposing Smart Sync..."
         
-        Task {
-            var sentCount = 0
-            let total = Double(songs.count)
-            
-            for song in songs {
-                if !isSyncing { break } // Check cancellation
-                
-                // Update specific status
-                await MainActor.run {
-                    syncStatus = "Sending: \(song.title)"
-                    self.progress = Double(sentCount) / total
-                }
-                
-                // Send the file
-                multipeer.sendSong(song.url, to: peer)
-                
-                // Artificial delay to prevent flooding the connection
-                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second gap
-                
-                sentCount += 1
-            }
-            
-            await MainActor.run {
-                isSyncing = false
-                progress = 1.0
-                syncStatus = sentCount == Int(total) ? "Sync Complete ✅" : "Sync Stopped"
+        // Start Protocol
+        multipeer.startSmartSync()
+        
+        // Reset button state after delay (actual transfer happens in background)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                self.isSyncing = false
+                self.syncStatus = "Catalog Sent"
             }
         }
     }
