@@ -38,9 +38,17 @@ struct PlaylistsListView: View {
                         }
                     }
                     
+                    
                     ForEach(filteredPlaylists) { playlist in
                         NavigationLink(destination: PlaylistDetailView(playlistID: playlist.id)) {
                             PlaylistRow(playlistID: playlist.id)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                library.deletePlaylist(playlist)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                     .onDelete(perform: deletePlaylists)
@@ -78,6 +86,7 @@ struct PlaylistsListView: View {
         } message: {
             Text("Enter a name for your new playlist")
         }
+        .preferredColorScheme(.dark)
     }
     
     private func deletePlaylists(at offsets: IndexSet) {
@@ -115,7 +124,7 @@ struct FavoritesRow: View {
                         }
                 } else {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.red.opacity(0.1))
+                        .fill(ModernTheme.mediumGray)
                         .frame(width: 60, height: 60)
                 }
                 
@@ -164,7 +173,7 @@ struct FavoritesDetailView: View {
                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                      } else {
                           RoundedRectangle(cornerRadius: 16)
-                              .fill(LinearGradient(colors: [.red, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                              .fill(ModernTheme.mediumGray)
                               .frame(width: 200, height: 200)
                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                      }
@@ -191,11 +200,11 @@ struct FavoritesDetailView: View {
                     } label: {
                         Label("Play", systemImage: "play.fill")
                             .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .cornerRadius(12)
+                             .foregroundColor(ModernTheme.pureBlack)
+                             .frame(maxWidth: .infinity)
+                             .padding()
+                             .background(Color.white)
+                             .cornerRadius(12)
                     }
                     .padding(.horizontal)
                 }
@@ -221,7 +230,7 @@ struct FavoritesDetailView: View {
             } else {
                 List {
                     ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                        SongRow(
+                        SimpleSongRow(
                             song: song,
                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,
                             isSelected: false,
@@ -274,14 +283,18 @@ struct PlaylistRow: View {
                 .cornerRadius(8)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(playlist?.name ?? "Unknown Playlist")
+                Text((playlist?.name ?? "Unknown Playlist").normalizedForDisplay)
                     .font(.body)
                     .fontWeight(.medium)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 Text("\(songs.count) song\(songs.count != 1 ? "s" : "")")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
             Spacer()
         }
@@ -318,7 +331,7 @@ struct PlaylistArtwork: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -406,10 +419,10 @@ struct PlaylistDetailView: View {
                     } label: {
                         Label("Play", systemImage: "play.fill")
                             .font(.headline)
-                            .foregroundColor(.white)
+                            .foregroundColor(ModernTheme.pureBlack)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
+                            .background(Color.white)
                             .cornerRadius(12)
                     }
                     .padding(.horizontal)
@@ -435,7 +448,7 @@ struct PlaylistDetailView: View {
             } else {
                 List {
                     ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                        SongRow(
+                        SimpleSongRow(
                             song: song,
                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,
                             isSelected: false,
@@ -506,9 +519,9 @@ struct EmptyPlaylistsView: View {
             } label: {
                 Label("Create Playlist", systemImage: "plus")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(ModernTheme.pureBlack)
                     .padding()
-                    .background(Color.blue)
+                    .background(Color.white)
                     .cornerRadius(12)
             }
         }

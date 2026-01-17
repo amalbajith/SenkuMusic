@@ -6,147 +6,178 @@
 //
 
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 struct MiniPlayerView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @State private var dragOffset: CGFloat = 0
+    @State private var backgroundColor: Color = .clear
+    
+    private func updateBackgroundColor() {
+        guard let song = player.currentSong else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let color = DominantColorExtractor.shared.extractDominantColor(for: song)
+            DispatchQueue.main.async {
+                withAnimation {
+                    self.backgroundColor = color
+                }
+            }
+        }
+    }
     
     var body: some View {
-        if player.currentSong != nil {
-            VStack(spacing: 0) {
-                // Progress Bar
-                GeometryReader { geometry in
-                    Rectangle()
-                        .fill(Color.blue)
-                        .frame(width: geometry.size.width * CGFloat(player.currentTime / max(player.duration, 1)))
-                }
-                .frame(height: 2)
-                
-                // Mini Player Content
+        if let song = player.currentSong {
+            ZStack(alignment: .bottom) {
+                // Main Pill Container
                 HStack(spacing: 12) {
                     // Artwork
-                    if let artworkData = player.currentSong?.artworkData,
+                    if let artworkData = song.artworkData,
                        let platformImage = PlatformImage.fromData(artworkData) {
                         Image(platformImage: platformImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 50, height: 50)
+                            .frame(width: 44, height: 44)
                             .cornerRadius(8)
                     } else {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 50, height: 50)
-                            .overlay {
-                                Image(systemName: "music.note")
-                                    .foregroundColor(.white)
-                            }
+                        Rectangle()
+                            .fill(ModernTheme.mediumGray)
+                            .frame(width: 44, height: 44)
+                            .cornerRadius(8)
+                            .overlay(Image(systemName: "music.note").foregroundColor(.white.opacity(0.3)))
                     }
                     
                     // Song Info
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(player.currentSong?.title ?? "")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(song.title.normalizedForDisplay)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white)
                             .lineLimit(1)
                         
-                        Text(player.currentSong?.artist ?? "")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text("NOW PLAYING")
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundColor(ModernTheme.accentYellow)
+                            
+                            Text("•")
+                                .foregroundColor(.white.opacity(0.3))
+                                
+                            Text(song.artist.normalizedForDisplay)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                                .lineLimit(1)
+                        }
                     }
                     
                     Spacer()
                     
-                    // Previous Button
-                    Button {
-                        player.playPrevious()
-                    } label: {
-                        Image(systemName: "backward.fill")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .frame(width: 44, height: 44)
-                    }
-
-                    // Play/Pause Button
+                    // Play/Pause
                     Button {
                         player.togglePlayPause()
                     } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.title3)
-                            .foregroundColor(.primary)
-                            .frame(width: 44, height: 44)
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
                     }
+                    .padding(.trailing, 8)
                     
-                    // Next Button
+                    // Next
                     Button {
-                        player.playNext()
+                        AudioPlayerManager.shared.playNext()
                     } label: {
                         Image(systemName: "forward.fill")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .frame(width: 44, height: 44)
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    player.isNowPlayingPresented = true
-                }
+                .background(
+                    ZStack {
+                        // Blurred background
+                        BlurView(style: .systemThinMaterialDark)
+                        
+                        // Dynamic Tint
+                        backgroundColor.opacity(0.3)
+                        
+                        // Glassy border
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    }
+                )
+                .onAppear { updateBackgroundColor() }
+                .onChange(of: player.currentSong) { _, _ in updateBackgroundColor() }
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-            .offset(x: dragOffset)
-            .opacity(1 - Double(min(abs(dragOffset) / 300, 0.8)))
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 10)
+            .frame(height: 64)
+            .padding(.horizontal, 12)
+            .onTapGesture {
+                player.isNowPlayingPresented = true
+            }
+            .offset(y: dragOffset)
+            .gesture(
+                DragGesture()
                     .onChanged { value in
-                        // Only allow leftward swipes
-                        if value.translation.width < 0 {
-                            dragOffset = value.translation.width
+                        if value.translation.height > 0 {
+                            dragOffset = value.translation.height
                         }
                     }
                     .onEnded { value in
-                        if value.translation.width < -100 {
-                            // Dismiss threshold reached
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                dragOffset = -400
-                            }
-                            
-                            // Stop playback after animation
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        if value.translation.height > 80 {
+                            withAnimation(.spring()) {
+                                dragOffset = 300
                                 player.stop()
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 dragOffset = 0
                             }
                         } else {
-                            // Snap back
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(.spring()) {
                                 dragOffset = 0
                             }
                         }
                     }
             )
-            .sheet(isPresented: $player.isNowPlayingPresented) {
-                NowPlayingView()
-            }
-            .cornerRadius(35)
-            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 60) // Float above TabBar
         }
     }
 }
 
+// MARK: - Blur View Helper
+#if os(iOS)
+struct BlurView: UIViewRepresentable {
+    let style: UIBlurEffect.Style
+    
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: style))
+    }
+    
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = UIBlurEffect(style: style)
+    }
+}
+#else
+enum BlurStyle {
+    case systemThinMaterialDark
+    case regular
+}
+
+struct BlurView: View {
+    init(style: BlurStyle) {}
+    var body: some View {
+        Color.black.opacity(0.8)
+            .background(.ultraThinMaterial)
+    }
+}
+#endif
+
 #Preview {
-    VStack {
-        Spacer()
-        MiniPlayerView()
+    ZStack {
+        Color.black.ignoresSafeArea()
+        VStack {
+            Spacer()
+            MiniPlayerView()
+        }
     }
 }

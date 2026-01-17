@@ -10,21 +10,32 @@ import AVFoundation
 
 @main
 struct SenkuPlayerApp: App {
+    @State private var showSplash = true
+    
     init() {
-        #if os(iOS)
-        // Configure audio session for background playback
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Failed to setup audio session: \(error)")
-        }
-        #endif
+        // Audio session setup is handled in AudioPlayerManager
     }
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ZStack {
+                ContentView()
+                    .opacity(showSplash ? 0 : 1)
+                
+                if showSplash {
+                    SplashScreenView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .onAppear {
+                // Hide splash screen after 3.5 seconds to allow animations to play
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    withAnimation(.easeInOut(duration: 0.8)) {
+                        showSplash = false
+                    }
+                }
+            }
         }
     }
 }

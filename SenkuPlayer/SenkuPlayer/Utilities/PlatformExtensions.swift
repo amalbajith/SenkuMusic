@@ -2,8 +2,6 @@
 //  PlatformExtensions.swift
 //  SenkuPlayer
 //
-//  Created by Amal on 30/12/25.
-//
 
 import SwiftUI
 import CoreImage
@@ -27,14 +25,6 @@ extension PlatformColor {
         return .secondarySystemBackground
         #endif
     }
-    
-    static var tertiaryBackground: PlatformColor {
-        #if os(macOS)
-        return .controlBackgroundColor
-        #else
-        return .tertiarySystemBackground
-        #endif
-    }
 }
 
 // MARK: - Image View Extension
@@ -44,39 +34,6 @@ extension Image {
         self.init(nsImage: platformImage)
         #else
         self.init(uiImage: platformImage)
-        #endif
-    }
-}
-
-// MARK: - Platform Utils
-struct PlatformUtils {
-    static var deviceName: String {
-        #if os(macOS)
-        return Host.current().localizedName ?? ProcessInfo.processInfo.hostName
-        #else
-        return UIDevice.current.name
-        #endif
-    }
-    
-    static var screenWidth: CGFloat {
-        #if os(macOS)
-        return NSScreen.main?.frame.width ?? 800
-        #else
-        let windowScene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first
-        return windowScene?.screen.bounds.width ?? 375
-        #endif
-    }
-    
-    static var screenHeight: CGFloat {
-        #if os(macOS)
-        return NSScreen.main?.frame.height ?? 600
-        #else
-        let windowScene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first
-        return windowScene?.screen.bounds.height ?? 812
         #endif
     }
 }
@@ -97,25 +54,15 @@ extension PlatformImage {
     static func fromData(_ data: Data) -> PlatformImage? {
         return PlatformImage(data: data)
     }
-    
-    var averageColor: PlatformColor? {
+}
+
+// MARK: - Device Info
+struct DeviceInfo {
+    static var name: String {
         #if os(macOS)
-        guard let tiffData = tiffRepresentation,
-              let bitmapRep = NSBitmapImageRep(data: tiffData),
-              let ciImage = CIImage(bitmapImageRep: bitmapRep) else { return nil }
+        return Host.current().localizedName ?? "Mac"
         #else
-        guard let ciImage = CIImage(image: self) else { return nil }
+        return UIDevice.current.name
         #endif
-        
-        let extentVector = CIVector(x: ciImage.extent.origin.x, y: ciImage.extent.origin.y, z: ciImage.extent.size.width, w: ciImage.extent.size.height)
-        
-        guard let filter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: ciImage, kCIInputExtentKey: extentVector]) else { return nil }
-        guard let outputImage = filter.outputImage else { return nil }
-        
-        var pixelData = [UInt8](repeating: 0, count: 4)
-        let context = CIContext(options: [.workingColorSpace: kCFNull as Any])
-        context.render(outputImage, toBitmap: &pixelData, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-        
-        return PlatformColor(red: CGFloat(pixelData[0]) / 255, green: CGFloat(pixelData[1]) / 255, blue: CGFloat(pixelData[2]) / 255, alpha: CGFloat(pixelData[3]) / 255)
     }
 }

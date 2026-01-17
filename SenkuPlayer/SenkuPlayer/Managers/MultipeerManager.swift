@@ -24,7 +24,11 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var lastReceivedSongName: String?
     @Published var showReceivedNotification = false
     @Published var isReceiving = false
+    @Published var isSending = false
     @Published var transferProgress: Double = 0
+    
+    // Track connecting peers
+    @Published var connectingPeers: [MCPeerID] = []
     
     // Invitation Handling
     @Published var showingInvitationAlert = false
@@ -34,7 +38,7 @@ class MultipeerManager: NSObject, ObservableObject {
     
     override init() {
         // Sanitize device name (remove special characters that can break discovery)
-        let rawName = PlatformUtils.deviceName
+        let rawName = DeviceInfo.name
         let sanitizedName = rawName.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: " ")
         myPeerId = MCPeerID(displayName: sanitizedName.isEmpty ? "Unknown Device" : sanitizedName)
         
@@ -64,11 +68,22 @@ class MultipeerManager: NSObject, ObservableObject {
     }
     
     func sendSong(_ url: URL, to peer: MCPeerID) {
-        guard session.connectedPeers.contains(peer) else { return }
+        guard session.connectedPeers.contains(peer) else { 
+            print("⚠️ Cannot send: Peer not connected in session")
+            return 
+        }
         
-        session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { error in
-            if let error = error {
-                print("Error sending file: \(error.localizedDescription)")
+        print("📤 Starting send to \(peer.displayName): \(url.lastPathComponent)")
+        DispatchQueue.main.async { self.isSending = true }
+        
+        session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { [weak self] error in
+            DispatchQueue.main.async {
+                self?.isSending = false
+                if let error = error {
+                    print("❌ Error sending file: \(error.localizedDescription)")
+                } else {
+                    print("✅ Successfully sent file to \(peer.displayName)")
+                }
             }
         }
     }
@@ -92,17 +107,23 @@ class MultipeerManager: NSObject, ObservableObject {
 extension MultipeerManager: MCSessionDelegate {
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         DispatchQueue.main.async {
+            // Remove from connecting list in all cases
+            self.connectingPeers.removeAll { $0 == peerID }
+            
             switch state {
             case .connected:
+                print("🔗 Connected to \(peerID.displayName)")
                 if !self.connectedPeers.contains(peerID) {
                     self.connectedPeers.append(peerID)
                 }
             case .notConnected:
-                if let index = self.connectedPeers.firstIndex(of: peerID) {
-                    self.connectedPeers.remove(at: index)
-                }
+                print("🚫 Disconnected from \(peerID.displayName)")
+                self.connectedPeers.removeAll { $0 == peerID }
             case .connecting:
-                break
+                print("⏳ Connecting to \(peerID.displayName)...")
+                if !self.connectingPeers.contains(peerID) {
+                    self.connectingPeers.append(peerID)
+                }
             @unknown default:
                 break
             }
@@ -166,8 +187,10 @@ extension MultipeerManager: MCSessionDelegate {
                 self.lastReceivedSongName = sanitizedName.replacingOccurrences(of: ".mp3", with: "", options: .caseInsensitive)
                 self.showReceivedNotification = true
                 
-                // Refresh library using the new async scan logic
-                MusicLibraryManager.shared.loadSavedData()
+                // Import the new song
+                Task {
+                    await MusicLibraryManager.shared.addSongFromURL(destinationURL)
+                }
                 
             } catch {
                 print("Error saving received file: \(error.localizedDescription)")

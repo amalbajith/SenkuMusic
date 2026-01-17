@@ -12,11 +12,11 @@ import UIKit
 
 struct SettingsView: View {
     @StateObject private var library = MusicLibraryManager.shared
+    @StateObject private var player = AudioPlayerManager.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showingClearLibraryAlert = false
     @AppStorage("darkMode") private var darkMode = false
-    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
     @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
     @AppStorage("gaplessPlayback") private var gaplessPlayback: Bool = true
 
@@ -26,284 +26,283 @@ struct SettingsView: View {
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
     @AppStorage("devEnableDebugLogging") private var devEnableDebugLogging = false
     @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
-    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
+
 
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
-    @State private var showDeviceTransferDisclaimer = false
+
     @State private var showPasswordPrompt = false
     @State private var passwordInput = ""
     
     // Dev mode password - change this to whatever you want
     private let devPassword = "senku2025"
     
+    
     var body: some View {
         NavigationStack {
-            List {
-                // Appearance Section
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { darkMode },
-                        set: { newValue in
-                            withAnimation(.easeInOut(duration: 0.8)) {
-                                darkMode = newValue
-                            }
-                        }
-                    )) {
-                        HStack {
-                            Image(systemName: darkMode ? "moon.fill" : "sun.max.fill")
-                                .foregroundColor(darkMode ? .blue : .orange)
-                            Text("Dark Mode")
-                        }
-                    }
-                    
-                    Toggle(isOn: Binding(
-                        get: { keepScreenAwake },
-                        set: { newValue in
-                            keepScreenAwake = newValue
-                            #if os(iOS)
-                            UIApplication.shared.isIdleTimerDisabled = newValue
-                            #endif
-                        }
-                    )) {
-                        HStack {
-                            Image(systemName: keepScreenAwake ? "eye.fill" : "eye.slash.fill")
-                                .foregroundColor(.blue)
-                            Text("Keep Screen Awake")
-                        }
-                    }
-                } header: {
-                    Text("Appearance")
-                }
+            ZStack {
+                ModernTheme.backgroundPrimary
+                    .ignoresSafeArea()
                 
-                // Audio Section
-                Section {
-                    NavigationLink(destination: EqualizerView()) {
-                        Label {
-                            Text("Equalizer")
-                        } icon: {
-                            Image(systemName: "slider.vertical.3")
-                                .foregroundColor(.green)
-                        }
-                    }
-                    
-                    Toggle(isOn: $gaplessPlayback) {
-                        Label {
-                            Text("Gapless Playback")
-                        } icon: {
-                            Image(systemName: "arrow.triangle.merge")
-                                .foregroundColor(.purple)
-                        }
-                    }
-                    
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Image(systemName: "arrow.left.and.right.square.fill")
-                                .foregroundColor(.blue)
-                            Text("Crossfade")
-                            Spacer()
-                            Text(crossfadeDuration == 0 ? "Off" : String(format: "%.1fs", crossfadeDuration))
-                                .foregroundColor(.secondary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        headerSection
+                        audioSection
+                        libraryStatsSection
+                        actionsSection
+                        
+                        if showDeveloperSection {
+                            developerSection
                         }
                         
-                        Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                        aboutSection
                     }
-                    .padding(.vertical, 4)
-                    
-                } header: {
-                    Text("Audio & Playback")
-                }
-                
-
-                
-                // Library Section
-                Section {
-                    HStack {
-                        Text("Total Songs")
-                        Spacer()
-                        Text("\(library.songs.count)")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Total Albums")
-                        Spacer()
-                        Text("\(library.albums.count)")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Total Artists")
-                        Spacer()
-                        Text("\(library.artists.count)")
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    HStack {
-                        Text("Total Playlists")
-                        Spacer()
-                        Text("\(library.playlists.count)")
-                            .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("Library Statistics")
-                }
-                
-                // Actions Section
-                Section {
-                    Button(role: .destructive) {
-                        showingClearLibraryAlert = true
-                    } label: {
-                        Label("Clear Library", systemImage: "trash")
-                    }
-                } header: {
-                    Text("Actions")
-                }
-                
-                // Developer Section (Easter Egg)
-                if showDeveloperSection {
-                    Section {
-                        HStack {
-                            Text("Developer")
-                            Spacer()
-                            Text("Amal B Ajith")
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Button {
-                            if let url = URL(string: "https://github.com/iamalbajith") {
-                                openURL(url)
-                            }
-                        } label: {
-                            HStack {
-                                Label("GitHub", systemImage: "link")
-                                Spacer()
-                                Image(systemName: "arrow.up.right.square")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                            }
-                        }
-                        
-                        Divider()
-                            .padding(.vertical, 4)
-                        
-                        Text("DEBUG FEATURES")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.bold)
-                        
-                        Toggle("Show File Extensions", isOn: $devShowFileExtensions)
-                        Toggle("Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
-                        Toggle("Enable Console Logging", isOn: $devEnableDebugLogging)
-                        Toggle("Force Vibrant UI", isOn: $devForceVibrantBackground)
-                        
-                        Divider()
-                            .padding(.vertical, 4)
-                        
-                        Text("EXPERIMENTAL FEATURES")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.bold)
-                        
-                        Toggle("Device Transfer Mode", isOn: $devEnableDeviceTransfer)
-                            .onChange(of: devEnableDeviceTransfer) { _, newValue in
-                                if newValue {
-                                    showDeviceTransferDisclaimer = true
-                                }
-                            }
-                        
-                        if devEnableDeviceTransfer {
-                            Text("⚠️ Only transfer music you own or have rights to share")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                                .padding(.vertical, 4)
-                        }
-                        
-                        Button(role: .destructive) {
-                            // Reset all dev settings
-                            devShowFileExtensions = false
-                            devDisableArtworkAnimation = false
-                            devEnableDebugLogging = false
-                            devForceVibrantBackground = false
-                            devEnableDeviceTransfer = false
-                        } label: {
-                            Text("Reset Dev Settings")
-                        }
-
-                    } header: {
-                        Text("Developer")
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-                
-                // About Section
-                Section {
-                    Button {
-                        handleVersionTap()
-                    } label: {
-                        HStack {
-                            Text("Version")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text("1.4.0")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    
-                    HStack {
-                        Text("Build")
-                        Spacer()
-                        Text("21")
-                            .foregroundColor(.secondary)
-                    }
-                } header: {
-                    Text("About")
+                    .padding(.bottom, player.currentSong != nil ? 100 : 20)
                 }
             }
-            .navigationTitle("Settings")
+            .preferredColorScheme(.dark)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(ModernTheme.lightGray)
                     }
                 }
             }
-            .alert("Clear Library", isPresented: $showingClearLibraryAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Clear", role: .destructive) {
-                    clearLibrary()
-                }
-            } message: {
-                Text("This will remove all songs from your library. This action cannot be undone.")
-            }
-            .alert("Legal Notice", isPresented: $showDeviceTransferDisclaimer) {
-                Button("I Understand") { }
-                Button("Disable", role: .cancel) {
-                    devEnableDeviceTransfer = false
-                }
-            } message: {
-                Text("Device Transfer Mode is intended for transferring music between your own devices.\n\n⚠️ Sharing copyrighted music without permission is illegal.\n\n✓ Only transfer music you own or have rights to share.\n✓ This feature is for personal use only.\n\nBy continuing, you agree to use this feature responsibly and legally.")
-            }
-            .alert("Developer Access", isPresented: $showPasswordPrompt) {
-                SecureField("Enter Password", text: $passwordInput)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                Button("Unlock") {
-                    verifyPassword()
-                }
-                Button("Cancel", role: .cancel) {
-                    passwordInput = ""
-                }
-            } message: {
-                Text("Enter the developer password to unlock advanced features.")
-            }
         }
+        .alert("Clear Library", isPresented: $showingClearLibraryAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) {
+                clearLibrary()
+            }
+        } message: {
+            Text("This will remove all songs from your library. This action cannot be undone.")
+        }
+        .alert("Developer Access", isPresented: $showPasswordPrompt) {
+            SecureField("Enter Password", text: $passwordInput)
+                .autocorrectionDisabled()
+            Button("Unlock") {
+                verifyPassword()
+            }
+            Button("Cancel", role: .cancel) {
+                passwordInput = ""
+            }
+        } message: {
+            Text("Enter the developer password to unlock advanced features.")
+        }
+        .background(ModernTheme.backgroundPrimary)
         .preferredColorScheme(darkMode ? .dark : .light)
         .animation(.easeInOut(duration: 0.8), value: darkMode)
+    }
+    
+    // MARK: - View Sections
+    
+    private var headerSection: some View {
+        Text("Settings")
+            .font(ModernTheme.heroTitle())
+            .foregroundColor(.white)
+            .fontWeight(.bold)
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+    }
+    
+
+    
+    private var audioSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Audio & Playback")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 24)
+            
+            VStack(spacing: 12) {
+                NavigationLink(destination: EqualizerView()) {
+                    SettingsNavigationRow(
+                        icon: "slider.vertical.3",
+                        iconColor: .white,
+                        title: "Equalizer"
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                NavigationLink(destination: DownloadView()) {
+                    SettingsNavigationRow(
+                        icon: "arrow.down.circle.fill",
+                        iconColor: .white,
+                        title: "Download Music"
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                
+                SettingsToggleRow(
+                    icon: "arrow.triangle.merge",
+                    iconColor: .white,
+                    title: "Gapless Playback",
+                    isOn: $gaplessPlayback
+                )
+                
+                SettingsSliderRow(
+                    icon: "arrow.left.and.right.square.fill",
+                    iconColor: .white,
+                    title: "Crossfade",
+                    value: $crossfadeDuration,
+                    range: 0...12,
+                    step: 1,
+                    valueFormatter: { value in
+                        value == 0 ? "Off" : String(format: "%.1fs", value)
+                    }
+                )
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+    
+    private var libraryStatsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Library Statistics")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 24)
+            
+            HStack(spacing: 12) {
+                VStack(spacing: 12) {
+                    statBox(title: "Songs", value: "\(library.songs.count)")
+                    statBox(title: "Artists", value: "\(library.artists.count)")
+                }
+                VStack(spacing: 12) {
+                    statBox(title: "Albums", value: "\(library.albums.count)")
+                    statBox(title: "Playlists", value: "\(library.playlists.count)")
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+    
+    private func statBox(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .black))
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .cardBackground()
+    }
+    
+
+    
+    private var actionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Actions")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 24)
+            
+            Button {
+                showingClearLibraryAlert = true
+            } label: {
+                SettingsActionRow(
+                    icon: "trash",
+                    iconColor: .red,
+                    title: "Clear Library",
+                    isDestructive: true
+                )
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+    
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Developer")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 24)
+            
+            VStack(spacing: 12) {
+                SettingsInfoRow(title: "Developer", value: "Amal B Ajith")
+                
+                Button {
+                    if let url = URL(string: "https://github.com/iamalbajith") {
+                        openURL(url)
+                    }
+                } label: {
+                    SettingsNavigationRow(
+                        icon: "link",
+                        iconColor: .white,
+                        title: "GitHub"
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                Divider()
+                    .background(ModernTheme.lightGray.opacity(0.3))
+                    .padding(.vertical, 8)
+                
+                Text("DEBUG FEATURES")
+                    .font(ModernTheme.caption())
+                    .foregroundColor(ModernTheme.lightGray)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 16)
+                
+                SettingsToggleRow(icon: "doc.text", iconColor: .white, title: "Show File Extensions", isOn: $devShowFileExtensions)
+                SettingsToggleRow(icon: "photo", iconColor: .white, title: "Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
+                SettingsToggleRow(icon: "terminal", iconColor: .white, title: "Enable Console Logging", isOn: $devEnableDebugLogging)
+                SettingsToggleRow(icon: "sparkles", iconColor: .white, title: "Force Vibrant UI", isOn: $devForceVibrantBackground)
+                
+                Divider()
+                    .background(ModernTheme.lightGray.opacity(0.3))
+                    .padding(.vertical, 8)
+                
+                Text("EXPERIMENTAL FEATURES")
+                    .font(ModernTheme.caption())
+                    .foregroundColor(ModernTheme.lightGray)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 16)
+                
+                Button {
+                    devShowFileExtensions = false
+                    devDisableArtworkAnimation = false
+                    devEnableDebugLogging = false
+                    devForceVibrantBackground = false
+                } label: {
+                    SettingsActionRow(
+                        icon: "arrow.counterclockwise",
+                        iconColor: .red,
+                        title: "Reset Dev Settings",
+                        isDestructive: true
+                    )
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+    
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("About")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 24)
+            
+            VStack(spacing: 12) {
+                Button {
+                    handleVersionTap()
+                } label: {
+                    SettingsInfoRow(title: "Version", value: "1.4.0")
+                }
+                .buttonStyle(.plain)
+                
+                SettingsInfoRow(title: "Build", value: "22")
+            }
+            .padding(.horizontal, 24)
+        }
     }
     
     private func clearLibrary() {
@@ -357,6 +356,151 @@ struct SettingsView: View {
             // Shake animation would go here
             passwordInput = ""
         }
+    }
+}
+
+// MARK: - Settings Row Components
+
+struct SettingsToggleRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundColor(iconColor)
+                .frame(width: 44, height: 44)
+                .background(ModernTheme.mediumGray)
+                .cornerRadius(ModernTheme.smallRadius)
+            
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+        }
+        .padding(16)
+        .cardBackground()
+    }
+}
+
+struct SettingsNavigationRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundColor(iconColor)
+                .frame(width: 44, height: 44)
+                .background(ModernTheme.mediumGray)
+                .cornerRadius(ModernTheme.smallRadius)
+            
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .padding(16)
+        .cardBackground()
+    }
+}
+
+struct SettingsInfoRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text(value)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .padding(16)
+        .cardBackground()
+    }
+}
+
+struct SettingsActionRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let isDestructive: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body)
+                .foregroundColor(iconColor)
+                .frame(width: 44, height: 44)
+                .background(ModernTheme.mediumGray)
+                .cornerRadius(ModernTheme.smallRadius)
+            
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(isDestructive ? .red : .white)
+            
+            Spacer()
+        }
+        .padding(16)
+        .cardBackground()
+    }
+}
+
+struct SettingsSliderRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let valueFormatter: (Double) -> String
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundColor(iconColor)
+                    .frame(width: 44, height: 44)
+                    .background(ModernTheme.mediumGray)
+                    .cornerRadius(ModernTheme.smallRadius)
+                
+                Text(title)
+                    .font(ModernTheme.body())
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Text(valueFormatter(value))
+                    .font(ModernTheme.body())
+                    .foregroundColor(ModernTheme.lightGray)
+            }
+            
+            Slider(value: $value, in: range, step: step)
+                .tint(ModernTheme.accentYellow)
+        }
+        .padding(16)
+        .cardBackground()
     }
 }
 

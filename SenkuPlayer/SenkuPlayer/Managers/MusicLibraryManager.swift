@@ -2,8 +2,6 @@
 //  MusicLibraryManager.swift
 //  SenkuPlayer
 //
-//  Created by Amal on 30/12/25.
-//
 
 import Foundation
 import Combine
@@ -11,7 +9,6 @@ import Combine
 class MusicLibraryManager: ObservableObject {
     static let shared = MusicLibraryManager()
     
-    // MARK: - Published Properties
     @Published var songs: [Song] = []
     @Published var albums: [Album] = []
     @Published var artists: [Artist] = []
@@ -19,18 +16,6 @@ class MusicLibraryManager: ObservableObject {
     @Published var isScanning = false
     @Published var scanProgress: Double = 0
     
-    private var isDebugLoggingEnabled: Bool {
-        UserDefaults.standard.bool(forKey: "devEnableDebugLogging")
-    }
-    
-    private func debugLog(_ message: String) {
-        if isDebugLoggingEnabled {
-            print("🔍 [DEBUG] \(message)")
-        }
-    }
-
-    
-    // MARK: - Private Properties
     private let fileManager = FileManager.default
     private let userDefaults = UserDefaults.standard
     private let songsKey = "savedSongs"
@@ -38,69 +23,18 @@ class MusicLibraryManager: ObservableObject {
     
     private var songsFileURL: URL? {
         guard let documentsDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        return documentsDirectory.appendingPathComponent("songs.json")
+        return documentsDirectory.appendingPathComponent("library_v2.json")
     }
     
-    // MARK: - Initialization
     private init() {
-        // Load partial data immediately for UI skeleton
         if let data = userDefaults.data(forKey: playlistsKey),
            let decoded = try? JSONDecoder().decode([Playlist].self, from: data) {
             self.playlists = decoded
         }
-        
-        // Heavy lifting on background
         loadSavedData()
     }
     
-// Consolidated scanning logic now handled in loadSavedData() and scanMusicDirectoryAsync()
-
-    
-    // MARK: - File Scanning
-    func scanDirectory(_ url: URL) {
-        isScanning = true
-        scanProgress = 0
-        
-        Task(priority: .background) { [weak self] in
-            guard let self = self else { return }
-            
-            var foundSongs: [Song] = []
-            
-            if let enumerator = self.fileManager.enumerator(
-                at: url,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles, .skipsPackageDescendants]
-            ) {
-                let urls = enumerator.allObjects as? [URL] ?? []
-                let mp3URLs = urls.filter { $0.pathExtension.lowercased() == "mp3" }
-                self.debugLog("Found \(mp3URLs.count) MP3 files in \(url.lastPathComponent)")
-                let total = Double(mp3URLs.count)
-                
-                for (index, fileURL) in mp3URLs.enumerated() {
-                    self.debugLog("Scanning metadata for: \(fileURL.lastPathComponent)")
-                    if let song = await Song.fromURL(fileURL) {
-
-                        foundSongs.append(song)
-                    }
-                    
-                    let progress = Double(index + 1) / total
-                    await MainActor.run {
-                        self.scanProgress = progress
-                    }
-                }
-            }
-            
-            await MainActor.run {
-                self.songs.append(contentsOf: foundSongs)
-                self.organizeLibrary()
-                self.saveSongs()
-                self.isScanning = false
-                self.scanProgress = 0
-            }
-        }
-    }
-    
-    // MARK: - Import Individual Files
+    // MARK: - Import & Scanning
     func importFiles(_ urls: [URL]) {
         isScanning = true
         scanProgress = 0
@@ -109,198 +43,266 @@ class MusicLibraryManager: ObservableObject {
             guard let self = self else { return }
             
             var foundSongs: [Song] = []
+            let musicDir = self.getMusicDirectory()
             let total = Double(urls.count)
             
-            // Get app's Documents/Music directory
-            guard let documentsURL = self.fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                await MainActor.run {
-                    self.isScanning = false
-                    self.scanProgress = 0
-                }
-                return
-            }
-            
-            let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
-            
-            // Create Music directory if it doesn't exist
-            if !self.fileManager.fileExists(atPath: musicDirectory.path) {
-                try? self.fileManager.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
-            }
-            
-            for (index, fileURL) in urls.enumerated() {
-                // Only process MP3 files
-                if fileURL.pathExtension.lowercased() == "mp3" {
-                    // Copy file to app's Music directory
-                    let fileName = fileURL.lastPathComponent
-                    let destinationURL = musicDirectory.appendingPathComponent(fileName)
+            for (index, url) in urls.enumerated() {
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                
+                if url.pathExtension.lowercased() == "mp3" {
+                    let dest = musicDir.appendingPathComponent(url.lastPathComponent)
+                    if !self.fileManager.fileExists(atPath: dest.path) {
+                        try? self.fileManager.copyItem(at: url, to: dest)
+                    }
                     
-                    // Check if file already exists
-                    if !self.fileManager.fileExists(atPath: destinationURL.path) {
-                        do {
-                            try self.fileManager.copyItem(at: fileURL, to: destinationURL)
-                            
-                            // Create Song from copied file
-                            if let song = await Song.fromURL(destinationURL) {
-                                foundSongs.append(song)
-                            }
-                        } catch {
-                            print("Failed to copy file: \(error)")
+                    if let (song, artwork) = await Song.fromURL(dest) {
+                        if let artwork = artwork {
+                            ArtworkManager.shared.saveArtwork(artwork, for: song.id)
                         }
-                    } else {
-                        // File exists, check if already in library
-                        let songExists = await MainActor.run {
-                            self.songs.contains(where: { $0.url == destinationURL })
-                        }
-                        
-                        if !songExists {
-                            if let song = await Song.fromURL(destinationURL) {
-                                foundSongs.append(song)
-                            }
-                        }
+                        foundSongs.append(song)
                     }
                 }
                 
                 let progress = Double(index + 1) / total
-                await MainActor.run {
-                    self.scanProgress = progress
-                }
+                await MainActor.run { self.scanProgress = progress }
             }
             
             await MainActor.run {
-                if !foundSongs.isEmpty {
-                    self.songs.append(contentsOf: foundSongs)
+                for newSong in foundSongs {
+                    if !self.songs.contains(where: { $0.id == newSong.id }) {
+                        self.songs.append(newSong)
+                    }
+                }
+                self.organizeLibrary()
+                self.saveSongs()
+                self.isScanning = false
+                self.scanProgress = 0
+            }
+            
+            // Automatically fetch metadata for songs without artwork
+            await self.autoFetchMetadata(for: foundSongs)
+        }
+    }
+    
+    // Helper to add song from a known URL (e.g. from Sync or Download)
+    func addSongFromURL(_ url: URL) async {
+        if let (song, artwork) = await Song.fromURL(url) {
+            await MainActor.run {
+                if let artwork = artwork {
+                    ArtworkManager.shared.saveArtwork(artwork, for: song.id)
+                }
+                
+                if !self.songs.contains(where: { $0.id == song.id }) {
+                    self.songs.append(song)
                     self.organizeLibrary()
                     self.saveSongs()
                 }
-                self.isScanning = false
-                self.scanProgress = 0
+            }
+            // Auto fetch metadata if needed
+            if !song.hasArtwork {
+                await self.autoFetchMetadata(for: [song])
             }
         }
     }
     
-    func addSong(_ song: Song) {
-        if !songs.contains(where: { $0.id == song.id }) {
-            songs.append(song)
-            organizeLibrary()
-            saveSongs()
+    // MARK: - Auto Metadata Fetching
+    private func autoFetchMetadata(for songs: [Song]) async {
+        // Only fetch for songs missing artwork
+        let songsNeedingArtwork = songs.filter { !$0.hasArtwork }
+        
+        guard !songsNeedingArtwork.isEmpty else { return }
+        
+        print("🎨 Auto-fetching metadata for \(songsNeedingArtwork.count) songs...")
+        
+        let results = await MetadataFetcher.shared.fetchMetadataForSongs(songsNeedingArtwork)
+        
+        await MainActor.run {
+            var updateCount = 0
+            
+            for result in results {
+                // Save artwork
+                if let artwork = result.artwork {
+                    ArtworkManager.shared.saveArtwork(artwork, for: result.songId)
+                    updateCount += 1
+                }
+                
+                // Update song metadata
+                if let index = self.songs.firstIndex(where: { $0.id == result.songId }) {
+                    var updatedSong = self.songs[index]
+                    
+                    if let metadata = result.metadata {
+                        updatedSong.title = metadata.title
+                        updatedSong.artist = metadata.artist
+                        updatedSong.album = metadata.album
+                        updatedSong.year = metadata.year
+                        updatedSong.genre = metadata.genre
+                    }
+                    
+                    if result.artwork != nil {
+                        updatedSong.hasArtwork = true
+                    }
+                    
+                    self.songs[index] = updatedSong
+                }
+            }
+            
+            if updateCount > 0 {
+                self.saveSongs()
+                self.organizeLibrary()
+                self.objectWillChange.send()
+                print("✅ Auto-fetched metadata for \(updateCount) songs")
+            }
         }
+    }
+    
+    func getMusicDirectory() -> URL {
+        let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let music = docs.appendingPathComponent("Music", isDirectory: true)
+        if !fileManager.fileExists(atPath: music.path) {
+            try? fileManager.createDirectory(at: music, withIntermediateDirectories: true)
+        }
+        return music
     }
     
     func removeSong(_ song: Song) {
         songs.removeAll { $0.id == song.id }
-        
-        // Remove from playlists
-        for index in playlists.indices {
-            playlists[index].removeSong(song.id)
-        }
-        
+        ArtworkManager.shared.deleteArtwork(for: song.id)
         organizeLibrary()
         saveSongs()
-        savePlaylists()
+        
+        // Cleanup file if it was in our Music dir
+        if song.url.path.contains("/Documents/Music/") {
+            try? fileManager.removeItem(at: song.url)
+        }
     }
     
     func deleteAllSongs() {
-        // 1. Clear memory
+        // Clear memory
         songs.removeAll()
         albums.removeAll()
         artists.removeAll()
         
-        // 2. Clear UserDefaults
-        userDefaults.removeObject(forKey: songsKey)
+        // Clear artwork cache
+        ArtworkManager.shared.clearAll()
         
-        // 3. Delete physical files
-        guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
-        
-        if fileManager.fileExists(atPath: musicDirectory.path) {
-            do {
-                let files = try fileManager.contentsOfDirectory(at: musicDirectory, includingPropertiesForKeys: nil)
-                for file in files {
-                    try fileManager.removeItem(at: file)
-                }
-                debugLog("Successfully deleted all physical music files")
-            } catch {
-                print("Failed to delete physical files: \(error)")
-            }
+        // Delete saved library
+        if let url = songsFileURL {
+            try? fileManager.removeItem(at: url)
         }
-    }
-
-    
-    // MARK: - Library Organization
-    private func organizeLibrary() {
-        removeDuplicateSongs()
-        organizeAlbums()
-        organizeArtists()
-    }
-    
-    private func removeDuplicateSongs() {
-        var seenIDs = Set<UUID>()
-        songs = songs.filter { (song: Song) -> Bool in
-            if seenIDs.contains(song.id) {
-                return false
-            } else {
-                seenIDs.insert(song.id)
-                return true
+        
+        // Delete physical files
+        let musicDir = getMusicDirectory()
+        if let files = try? fileManager.contentsOfDirectory(at: musicDir, includingPropertiesForKeys: nil) {
+            for file in files {
+                try? fileManager.removeItem(at: file)
             }
         }
     }
     
-    private func organizeAlbums() {
+    // MARK: - Library Organization (Optimized)
+    func organizeLibrary() {
+        // Use dictionary for faster lookup during organization
         var albumDict: [String: Album] = [:]
-        
-        for song in songs {
-            let key = "\(song.album)_\(song.artist)"
-            
-            if var album = albumDict[key] {
-                album.songs.append(song)
-                albumDict[key] = album
-            } else {
-                let album = Album(
-                    name: song.album,
-                    artist: song.artist,
-                    songs: [song],
-                    artworkData: song.artworkData
-                )
-                albumDict[key] = album
-            }
-        }
-        
-        albums = Array(albumDict.values).sorted { $0.name < $1.name }
-        
-        // Sort songs within each album by track number
-        for index in albums.indices {
-            albums[index].songs.sort { (song1, song2) -> Bool in
-                if let track1 = song1.trackNumber, let track2 = song2.trackNumber {
-                    return track1 < track2
-                }
-                return song1.title < song2.title
-            }
-        }
-    }
-    
-    private func organizeArtists() {
         var artistDict: [String: Artist] = [:]
         
         for song in songs {
-            let artistName = song.artist
+            // Album organization
+            let albumKey = "\(song.album)_\(song.artist)"
+            if albumDict[albumKey] == nil {
+                albumDict[albumKey] = Album(name: song.album, artist: song.artist, songs: [], artworkData: nil)
+            }
+            albumDict[albumKey]?.songs.append(song)
             
-            if var artist = artistDict[artistName] {
-                artist.songs.append(song)
-                artistDict[artistName] = artist
-            } else {
-                let artist = Artist(name: artistName, songs: [song])
-                artistDict[artistName] = artist
+            // Artist organization
+            if artistDict[song.artist] == nil {
+                artistDict[song.artist] = Artist(name: song.artist, songs: [])
+            }
+            artistDict[song.artist]?.songs.append(song)
+        }
+        
+        self.albums = Array(albumDict.values).sorted { $0.name < $1.name }
+        self.artists = Array(artistDict.values).sorted { $0.name < $1.name }
+        
+        // Link albums to artists
+        for i in artists.indices {
+            let name = artists[i].name
+            artists[i].albums = albums.filter { $0.artist == name }
+        }
+    }
+    
+    // MARK: - Persistence
+    func saveSongs() {
+        guard let url = songsFileURL else { return }
+        if let data = try? JSONEncoder().encode(songs) {
+            try? data.write(to: url)
+        }
+    }
+    
+    private func savePlaylists() {
+        if let data = try? JSONEncoder().encode(playlists) {
+            userDefaults.set(data, forKey: playlistsKey)
+        }
+    }
+    
+    func loadSavedData() {
+        Task(priority: .userInitiated) {
+            guard let url = songsFileURL, let data = try? Data(contentsOf: url) else { return }
+            if var decoded = try? JSONDecoder().decode([Song].self, from: data) {
+                
+                // Repair URLs for Sandbox Changes
+                let musicDir = self.getMusicDirectory()
+                for i in decoded.indices {
+                    let filename = decoded[i].url.lastPathComponent
+                    // Always point to current sandbox Music directory
+                    decoded[i].url = musicDir.appendingPathComponent(filename)
+                }
+                
+                await MainActor.run {
+                    self.songs = decoded
+                    self.organizeLibrary()
+                }
             }
         }
-        
-        // Organize albums for each artist
-        for (name, var artist) in artistDict {
-            let artistAlbums = albums.filter { $0.artist == name }
-            artist.albums = artistAlbums
-            artistDict[name] = artist
+    }
+    
+    // MARK: - Helper Methods
+    func recordPlay(for song: Song) {
+        if let index = songs.firstIndex(where: { $0.id == song.id }) {
+            var updatedSong = songs[index]
+            updatedSong.lastPlayedDate = Date()
+            updatedSong.playCount += 1
+            songs[index] = updatedSong
+            saveSongs()
         }
-        
-        artists = Array(artistDict.values).sorted { $0.name < $1.name }
+    }
+    
+    func getRecentlyPlayed(limit: Int = 50) -> [Song] {
+        return songs
+            .filter { $0.lastPlayedDate != nil }
+            .sorted { ($0.lastPlayedDate ?? Date.distantPast) > ($1.lastPlayedDate ?? Date.distantPast) }
+            .prefix(limit)
+            .map { $0 }
+    }
+    
+    func getSongsForPlaylist(_ playlist: Playlist) -> [Song] {
+        return playlist.songIDs.compactMap { id in songs.first { $0.id == id } }
+    }
+    
+    func searchSongs(query: String) -> [Song] {
+        guard !query.isEmpty else { return songs }
+        let q = query.lowercased()
+        return songs.filter { $0.title.lowercased().contains(q) || $0.artist.lowercased().contains(q) }
+    }
+    
+    func searchAlbums(query: String) -> [Album] {
+        let q = query.lowercased()
+        return albums.filter { $0.name.lowercased().contains(q) || $0.artist.lowercased().contains(q) }
+    }
+    
+    func searchArtists(query: String) -> [Artist] {
+        let q = query.lowercased()
+        return artists.filter { $0.name.lowercased().contains(q) }
     }
     
     // MARK: - Playlist Management
@@ -330,153 +332,5 @@ class MusicLibraryManager: ObservableObject {
             savePlaylists()
         }
     }
-    
-    func getSongsForPlaylist(_ playlist: Playlist) -> [Song] {
-        return playlist.songIDs.compactMap { (songID: UUID) -> Song? in
-            songs.first { $0.id == songID }
-        }
-    }
-    
-
-
-    // MARK: - Persistence
-    private func saveSongs() {
-        guard let url = songsFileURL else { return }
-        // Only save URLs, not full Song objects
-        let urls = songs.map { $0.url }
-        do {
-            let data = try JSONEncoder().encode(urls)
-            try data.write(to: url)
-        } catch {
-            print("❌ Failed to save songs list: \(error)")
-        }
-    }
-    
-    private func savePlaylists() {
-        if let encoded = try? JSONEncoder().encode(playlists) {
-            userDefaults.set(encoded, forKey: playlistsKey)
-        }
-    }
-    
-    func loadSavedData() {
-        Task(priority: .background) { [weak self] in
-            guard let self = self else { return }
-            
-            var loadedSongs: [Song] = []
-            
-            // 1. Load song URLs
-            var loadedURLs: [URL] = []
-            
-            // Try loading from JSON file first (new method)
-            if let url = self.songsFileURL,
-               let data = try? Data(contentsOf: url),
-               let urls = try? JSONDecoder().decode([URL].self, from: data) {
-                loadedURLs = urls
-            }
-            // Migration: Check UserDefaults if file was empty/missing
-            else if let data = self.userDefaults.data(forKey: self.songsKey),
-                    let urls = try? JSONDecoder().decode([URL].self, from: data) {
-                print("🔄 Migrating library from UserDefaults to JSON file needed...")
-                loadedURLs = urls
-                // We will save to file at the end of this block implicitly by calling saveSongs() later if needed,
-                // but let's just flag that we loaded something.
-            }
-            
-            for url in loadedURLs {
-                if self.fileManager.fileExists(atPath: url.path) {
-                    if let song = await Song.fromURL(url) {
-                        loadedSongs.append(song)
-                    }
-                }
-            }
-            
-            await MainActor.run {
-                self.songs = loadedSongs
-                self.organizeLibrary()
-                // Save to new format to complete migration if needed
-                self.saveSongs()
-                
-                // Optional: Clear old UserDefaults key after successful load & save?
-                // self.userDefaults.removeObject(forKey: self.songsKey)
-            }
-            
-            // 2. Scan Music directory for NEW files
-            // Pass loadedSongs to avoid race condition with self.songs
-            self.scanMusicDirectoryAsync(existingSongs: loadedSongs)
-        }
-    }
-    
-    private func scanMusicDirectoryAsync(existingSongs: [Song]? = nil) {
-        Task(priority: .background) { [weak self] in
-            guard let self = self else { return }
-            
-            guard let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-            let musicDirectory = documentsURL.appendingPathComponent("Music", isDirectory: true)
-            
-            if !fileManager.fileExists(atPath: musicDirectory.path) {
-                try? fileManager.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
-                return
-            }
-            
-            guard let files = try? fileManager.contentsOfDirectory(at: musicDirectory, includingPropertiesForKeys: nil) else { return }
-            let mp3Files = files.filter { $0.pathExtension.lowercased() == "mp3" }
-            
-            // Use provided list or current library
-            let referenceSongs: [Song]
-            if let existing = existingSongs {
-                referenceSongs = existing
-            } else {
-                referenceSongs = await MainActor.run { self.songs }
-            }
-            
-            var newSongs: [Song] = []
-            for fileURL in mp3Files {
-                // Use stable ID to check for duplicates
-                if !referenceSongs.contains(where: { $0.url.lastPathComponent == fileURL.lastPathComponent }) {
-                    if let song = await Song.fromURL(fileURL) {
-                        newSongs.append(song)
-                    }
-                }
-            }
-            
-            if !newSongs.isEmpty {
-                await MainActor.run {
-                    self.songs.append(contentsOf: newSongs)
-                    self.organizeLibrary()
-                    self.saveSongs()
-                }
-            }
-        }
-    }
-    
-    // MARK: - Search
-    func searchSongs(query: String) -> [Song] {
-        guard !query.isEmpty else { return songs }
-        
-        let lowercasedQuery = query.lowercased()
-        return songs.filter {
-            $0.title.lowercased().contains(lowercasedQuery) ||
-            $0.artist.lowercased().contains(lowercasedQuery) ||
-            $0.album.lowercased().contains(lowercasedQuery)
-        }
-    }
-    
-    func searchAlbums(query: String) -> [Album] {
-        guard !query.isEmpty else { return albums }
-        
-        let lowercasedQuery = query.lowercased()
-        return albums.filter {
-            $0.name.lowercased().contains(lowercasedQuery) ||
-            $0.artist.lowercased().contains(lowercasedQuery)
-        }
-    }
-    
-    func searchArtists(query: String) -> [Artist] {
-        guard !query.isEmpty else { return artists }
-        
-        let lowercasedQuery = query.lowercased()
-        return artists.filter {
-            $0.name.lowercased().contains(lowercasedQuery)
-        }
-    }
 }
+

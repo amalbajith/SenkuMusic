@@ -8,6 +8,8 @@
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Aura</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Aura needs access to the local network to share songs with nearby friends.</string>
 	<key>NSBonjourServices</key>
@@ -15,6 +17,14 @@
 	
 		<string>_senku-share._tcp</string>
 		<string>_senku-share._udp</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 </dict>
 </plist>

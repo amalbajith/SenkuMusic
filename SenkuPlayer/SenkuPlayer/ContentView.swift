@@ -6,94 +6,235 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @StateObject private var multipeer = MultipeerManager.shared
-    @AppStorage("darkMode") private var darkMode = false
-    @AppStorage("keepScreenAwake") private var keepScreenAwake = false
-    @AppStorage("devEnableDeviceTransfer") private var devEnableDeviceTransfer = false
+    @AppStorage("darkMode") private var darkMode = true
+    
+    @State private var selectedTab = 0
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    
+    var body: some View {
+        Group {
+            #if os(macOS)
+            MacOSLayout(selectedTab: $selectedTab)
+            #else
+            IOSLayout(selectedTab: $selectedTab)
+            #endif
+        }
+        .preferredColorScheme(.dark)
+        .alert("Connect Request", isPresented: $multipeer.showingInvitationAlert) {
+            Button("Decline", role: .cancel) { multipeer.declineInvitation() }
+            Button("Accept") { multipeer.acceptInvitation() }
+        } message: {
+            Text("'\(multipeer.invitationSenderName)' wants to connect for device transfer.")
+        }
+        .sheet(isPresented: $player.isNowPlayingPresented) {
+            NowPlayingView()
+        }
+    }
+}
 
+// MARK: - macOS Specific Layout
+#if os(macOS)
+struct MacOSLayout: View {
+    @Binding var selectedTab: Int
+    @StateObject private var player = AudioPlayerManager.shared
+    
+    var body: some View {
+        NavigationSplitView {
+            List(selection: $selectedTab) {
+                Section(header: Text("Browse")) {
+                    NavigationLink(value: 0) {
+                        Label("Home", systemImage: "house")
+                    }
+                    NavigationLink(value: 1) {
+                        Label("Library", systemImage: "music.note.list")
+                    }
+                }
+                
+                Section(header: Text("Tools")) {
+                    NavigationLink(value: 2) {
+                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    NavigationLink(value: 3) {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                }
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 250)
+            
+            Spacer()
+        } detail: {
+            VStack(spacing: 0) {
+                ZStack {
+                    ModernTheme.backgroundPrimary.ignoresSafeArea()
+                    
+                    switch selectedTab {
+                    case 0:
+                        LibraryView()
+                    case 1:
+                        PlaylistsListView(searchText: "")
+                    case 2:
+                        SyncView()
+                    case 3:
+                        SettingsView()
+                    default:
+                        LibraryView()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onDrop(of: [.audio, .fileURL], isTargeted: nil) { providers in
+                    Task {
+                        var urls: [URL] = []
+                        for provider in providers {
+                            if let item = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil),
+                               let data = item as? Data,
+                               let url = URL(dataRepresentation: data, relativeTo: nil) {
+                                urls.append(url)
+                            } else if let item = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil),
+                                      let url = item as? URL {
+                                urls.append(url)
+                            }
+                        }
+                        if !urls.isEmpty {
+                            await MainActor.run {
+                                MusicLibraryManager.shared.importFiles(urls)
+                            }
+                        }
+                    }
+                    return true
+                }
+                
+                // Mini Player at the bottom of main view
+                if player.currentSong != nil {
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                    MiniPlayerView()
+                        .padding()
+                        .background(ModernTheme.backgroundSecondary)
+                }
+            }
+        }
+        .frame(minWidth: 800, minHeight: 500)
+    }
+}
+#endif
+
+// MARK: - iOS Specific Layout
+struct IOSLayout: View {
+    @Binding var selectedTab: Int
+    @StateObject private var player = AudioPlayerManager.shared
+    @StateObject private var multipeer = MultipeerManager.shared
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Pure black background for dark mode
-            if darkMode {
-                Color.black.ignoresSafeArea()
-            }
+            // Background
+            ModernTheme.backgroundPrimary.ignoresSafeArea()
             
-            // Main Tab View
-            TabView {
-                LibraryView()
-                    .tabItem {
-                        Label("Home", systemImage: "house")
-                    }
-                
-                
-                NavigationStack {
-                    PlaylistsListView(searchText: "")
-                }
-                .tabItem {
-                    Label("Playlists", systemImage: "music.note.list")
-                }
-                
-
-                // Hidden feature - only shown when dev mode is enabled
-                if devEnableDeviceTransfer {
+            // Content
+            Group {
+                switch selectedTab {
+                case 0:
+                    LibraryView()
+                case 1:
                     NavigationStack {
-                        NearbyShareView(songs: [])
+                        PlaylistsListView(searchText: "")
                     }
-                    .tabItem {
-                        Label("Transfer", systemImage: "arrow.left.arrow.right.circle.fill")
-                    }
+                case 2:
+                    SyncView()  // Replaced NearbyShareView
+                case 3:
+                    SettingsView()
+                default:
+                    LibraryView()
                 }
-                
-                SettingsView()
-                    .tabItem {
-                        Label("Settings", systemImage: "gear")
-                    }
             }
-            .tint(.blue)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom) {
+                // Buffer for MiniPlayer + Navbar
+                Color.clear.frame(height: player.currentSong != nil ? 140 : 80)
+            }
             
-            VStack {
+            VStack(spacing: 0) {
                 // Received Notification
                 if multipeer.showReceivedNotification {
-                    receivedNotificationView
+                    ReceivedNotificationView()
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .padding(.top, 10)
                 }
                 
                 Spacer()
                 
-                // Mini Player Overlay
+                // Mini Player (Only if a song is playing)
                 if player.currentSong != nil {
                     MiniPlayerView()
+                        .padding(.bottom, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+                
+                // Modern Navbar
+                CustomNavbar(selectedTab: $selectedTab)
             }
             .ignoresSafeArea(.keyboard)
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: player.currentSong != nil)
-        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: multipeer.showReceivedNotification)
-        .preferredColorScheme(darkMode ? .dark : .light)
-        .alert("Connect Request", isPresented: $multipeer.showingInvitationAlert) {
-            Button("Decline", role: .cancel) {
-                multipeer.declineInvitation()
-            }
-            Button("Accept") {
-                multipeer.acceptInvitation()
-            }
-        } message: {
-            Text("'\(multipeer.invitationSenderName)' wants to connect for device transfer.")
+    }
+}
+
+// MARK: - Components for iOS
+struct CustomNavbar: View {
+    @Binding var selectedTab: Int
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 0) {
+            tabItem(index: 0, icon: "house", label: "HOME")
+            tabItem(index: 1, icon: "music.note.list", label: "LIBRARY")
+            tabItem(index: 2, icon: "arrow.triangle.2.circlepath", label: "SYNC")
+            tabItem(index: 3, icon: "gearshape", label: "SETTINGS")
         }
-        .onAppear {
-            #if os(iOS)
-            UIApplication.shared.isIdleTimerDisabled = keepScreenAwake
-            #endif
-        }
+        .padding(.top, 12)
+        .padding(.bottom, 24)
+        .background(
+            Color.black.opacity(0.8)
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
+        )
     }
     
-    private var receivedNotificationView: some View {
+    private func tabItem(index: Int, icon: String, label: String) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = index
+            }
+            #if os(iOS)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            #endif
+        } label: {
+            VStack(spacing: 6) {
+                let noFillIcons = ["music.note.list", "arrow.triangle.2.circlepath"]
+                let iconName = (selectedTab == index && !noFillIcons.contains(icon)) ? "\(icon)" : icon // Sync icon usually has no fill variant or behaves differently, keeping simple
+                
+                Image(systemName: iconName)
+                    .font(.system(size: 22))
+                
+                Text(label)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundColor(selectedTab == index ? ModernTheme.accentYellow : Color.white.opacity(0.4))
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+    }
+}
+
+struct ReceivedNotificationView: View {
+    @StateObject private var multipeer = MultipeerManager.shared
+    
+    var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
@@ -113,9 +254,7 @@ struct ContentView: View {
             Spacer()
             
             Button {
-                withAnimation {
-                    multipeer.showReceivedNotification = false
-                }
+                withAnimation { multipeer.showReceivedNotification = false }
             } label: {
                 Image(systemName: "xmark")
                     .font(.caption2)
@@ -130,23 +269,11 @@ struct ContentView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(platformColor: .secondaryBackground))
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+                .fill(Color.black.opacity(0.8))
+                .background(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 5)
         )
         .padding(.horizontal)
-        .onAppear {
-            #if os(iOS)
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-            #endif
-            
-            // Auto hide after 5 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                withAnimation {
-                    multipeer.showReceivedNotification = false
-                }
-            }
-        }
     }
 }
 

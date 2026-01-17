@@ -1,23 +1,3 @@
-//
-//  AudioPlayerManager.swift
-//  SenkuPlayer
-//
-//  Created by Amal on 30/12/25.
-//
-
-import Foundation
-import AVFoundation
-import MediaPlayer
-import Combine
-import SwiftUI
-
-//
-//  AudioPlayerManager.swift
-//  SenkuPlayer
-//
-//  Created by Amal on 30/12/25.
-//
-
 import Foundation
 import AVFoundation
 import MediaPlayer
@@ -37,8 +17,10 @@ class AudioPlayerManager: NSObject, ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published var isShuffled = false
     @Published var isNowPlayingPresented = false
+    @Published var showingShareRadar = false
     
     @Published var activeEqualizerProfile: EqualizerProfile = EqualizerProfile.defaultProfile()
+    @Published var isAutoMixEnabled: Bool = false
     
     // MARK: - Settings
     @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
@@ -127,10 +109,96 @@ class AudioPlayerManager: NSObject, ObservableObject {
         self.originalQueue = queue
         self.currentIndex = index
         
+        // Open the Now Playing view automatically when a song is selected (Spotify-style)
+        DispatchQueue.main.async {
+            self.isNowPlayingPresented = true
+        }
+        
         startPlayback(with: song)
     }
     
+    func play(song: Song, in queue: [Song]) {
+        let index = queue.firstIndex(of: song) ?? 0
+        playSong(song, in: queue, at: index)
+    }
+    
+    func shuffleAndPlay(songs: [Song]) {
+        var shuffledSongs = songs
+        shuffledSongs.shuffle()
+        if let first = shuffledSongs.first {
+            playSong(first, in: shuffledSongs, at: 0)
+            self.isShuffled = true
+        }
+    }
+    
+    // MARK: - AI Auto Mix
+    func startAutoMix(songs: [Song]) {
+        guard !songs.isEmpty else { return }
+        
+        let allSongs = songs
+        var pool = allSongs
+        var mixQueue: [Song] = []
+        
+        // 1. Pick a random start
+        guard let first = pool.randomElement() else { return }
+        mixQueue.append(first)
+        pool.removeAll { $0.id == first.id }
+        
+        var current = first
+        
+        // 2. Build the chain
+        while !pool.isEmpty {
+            // Find candidates that match Genre or Artist
+            let candidates = pool.filter { candidate in
+                let sameGenre = (candidate.genre != nil && candidate.genre == current.genre)
+                let sameArtist = candidate.artist == current.artist
+                return sameGenre || sameArtist
+            }
+            
+            if let nextMatch = candidates.randomElement() {
+                // Found a cohesive track
+                mixQueue.append(nextMatch)
+                pool.removeAll { $0.id == nextMatch.id }
+                current = nextMatch
+            } else {
+                // No match found, pick random to shift vibe
+                if let randomNext = pool.randomElement() {
+                    mixQueue.append(randomNext)
+                    pool.removeAll { $0.id == randomNext.id }
+                    current = randomNext
+                }
+            }
+        }
+        
+        // 3. Start Playback
+        print("✨ AI Auto Mix Generated with \(mixQueue.count) songs")
+        playSong(mixQueue[0], in: mixQueue, at: 0)
+        self.isAutoMixEnabled = true
+    }
+    
+    func playNext(song: Song) {
+        if queue.isEmpty {
+            play(song: song, in: [song])
+            return
+        }
+        
+        // Remove if already in queue to avoid duplicates
+        queue.removeAll { $0.id == song.id }
+        originalQueue.removeAll { $0.id == song.id }
+        
+        let insertIndex = Swift.min(currentIndex + 1, queue.count)
+        queue.insert(song, at: insertIndex)
+        originalQueue.append(song) // Keep original queue updated
+        
+        print("⏭️ Scheduled next: \(song.title)")
+    }
+    
     private func startPlayback(with song: Song) {
+        self.currentSong = song
+        
+        // Record Playback History
+        MusicLibraryManager.shared.recordPlay(for: song)
+        
         // Reset State
         stopCrossfade()
         playerA.stop()
@@ -139,9 +207,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
         playerA.volume = 1.0
         playerB.volume = 0.0
         
-        self.currentSong = song
-        self.nextSongScheduled = false
-        
         do {
             currentFile = try AVAudioFile(forReading: song.url)
             guard let file = currentFile else { return }
@@ -149,12 +214,17 @@ class AudioPlayerManager: NSObject, ObservableObject {
             sampleRate = file.processingFormat.sampleRate
             duration = Double(file.length) / sampleRate
             
-            if !engine.isRunning { try? engine.start() }
+            // Ensure engine is running
+            if !engine.isRunning {
+                try engine.start()
+            }
             
             // Generate Playback Token
             let token = UUID()
             self.playbackToken = token
             
+            // Reset node
+            playerA.reset()
             playerA.scheduleFile(file, at: nil) { [weak self] in
                 guard let self = self, self.playbackToken == token else { return }
                 self.handlePlaybackFinished()
@@ -166,13 +236,16 @@ class AudioPlayerManager: NSObject, ObservableObject {
             
             startTimers()
             updateNowPlayingInfo()
-            WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: true)
             
             // Preload next if gapless
             scheduleNextSong()
             
         } catch {
             print("❌ Error loading song: \(error)")
+            // Try restart engine if crashed
+            if !engine.isRunning {
+                try? engine.start()
+            }
         }
     }
     
@@ -252,7 +325,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
             self.nextFile = nil // Consumed
             self.nextSongScheduled = false
             self.updateNowPlayingInfo()
-            WidgetUpdateManager.shared.update(currentSong: nextSong, isPlaying: true)
         }
         
         // Animate Volumes
@@ -319,7 +391,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
         activePlayer.play()
         isPlaying = true
         startTimers()
-        WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: true)
     }
     
     func pause() {
@@ -327,7 +398,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
         inactivePlayer.pause()
         isPlaying = false
         playbackTimer?.invalidate()
-        WidgetUpdateManager.shared.update(currentSong: currentSong, isPlaying: false)
     }
     
     func togglePlayPause() { isPlaying ? pause() : play() }
@@ -339,7 +409,6 @@ class AudioPlayerManager: NSObject, ObservableObject {
         isPlaying = false
         playbackTimer?.invalidate()
         stopCrossfade()
-        WidgetUpdateManager.shared.update(currentSong: nil, isPlaying: false)
     }
     
     func playNext() {
@@ -349,9 +418,23 @@ class AudioPlayerManager: NSObject, ObservableObject {
             return
         }
         
-        guard let index = getNextIndex() else { return }
-        currentIndex = index
-        startPlayback(with: queue[index])
+        // Manual skip logic:
+        // 1. Always advance, ignoring Repeat One
+        // 2. Wrap if Repeat All
+        // 3. Stop if Repeat Off and at end (or wrap if you prefer loose behavior, but strict is safer)
+        
+        let nextIndex = currentIndex + 1
+        
+        if nextIndex < queue.count {
+            currentIndex = nextIndex
+            startPlayback(with: queue[currentIndex])
+        } else if repeatMode == .all {
+            currentIndex = 0
+            startPlayback(with: queue[0])
+        } else {
+            // End of queue and no repeat - do nothing or stop
+            print("End of queue reached")
+        }
     }
     
     func playNext(_ song: Song) {
@@ -455,6 +538,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         if (duration - currentTime) < 5.0 && !nextSongScheduled {
             scheduleNextSong()
         }
+        
     }
     
     // MARK: - EQ & Info
@@ -485,12 +569,11 @@ class AudioPlayerManager: NSObject, ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
-    // MARK: - Notification Handlers (Stubbed for brevity, same as before)
+    // MARK: - Notification Handlers
     private func setupNotifications() {
-        // Implement interruptions
     }
+    
     private func setupRemoteCommandCenter() {
-        // Implement remote commands
         let cc = MPRemoteCommandCenter.shared()
         cc.playCommand.isEnabled = true
         cc.playCommand.addTarget { [weak self] _ in self?.play(); return .success }
@@ -500,7 +583,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         cc.nextTrackCommand.addTarget { [weak self] _ in self?.playNext(); return .success }
         cc.previousTrackCommand.isEnabled = true
         cc.previousTrackCommand.addTarget { [weak self] _ in self?.playPrevious(); return .success }
-        // Seek
+        
         cc.changePlaybackPositionCommand.isEnabled = true
         cc.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let e = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
@@ -509,7 +592,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         }
     }
     
-    // Standard Shuffle/Repeat Toggles
+    // MARK: - Toggles
     func toggleShuffle() {
         isShuffled.toggle()
         if isShuffled {
@@ -535,5 +618,10 @@ class AudioPlayerManager: NSObject, ObservableObject {
         case .one: repeatMode = .off
         }
     }
+    
+    func toggleAutoMix() {
+        isAutoMixEnabled.toggle()
+    }
+    
 }
 

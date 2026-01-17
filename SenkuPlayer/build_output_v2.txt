@@ -1,0 +1,418 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer.xcodeproj -scheme SenkuPlayer -destination generic/platform=iOS
+
+2026-01-16 23:13:46.603 xcodebuild[71872:5136612] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'SenkuPlayer' in project 'SenkuPlayer' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: fd7e1f36f980753bb4c43ebf6db9a896
+Build description path: /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/XCBuildData/fd7e1f36f980753bb4c43ebf6db9a896.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk /Users/amalbajith/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3885c01c3e6b6a337905948deab2002e3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -o /Users/amalbajith/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3885c01c3e6b6a337905948deab2002e3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache
+
+SwiftDriver SenkuPlayer normal arm64 com.apple.xcode.tools.swift.compiler (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name SenkuPlayer -Onone -enforce-exclusivity\=checked @/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -target arm64-apple-ios26.2 -g -module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos -F /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos -emit-localized-strings -emit-localized-strings-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3885c01c3e6b6a337905948deab2002e3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache -output-file-map /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer_const_extract_protocols.json -Xcc -iquote -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-generated-files.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-own-target-headers.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-all-target-headers.hmap -Xcc -iquote -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-project-headers.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/include -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources-normal/arm64 -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources/arm64 -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer-Swift.h -working-directory /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer -experimental-emit-module-separately -disable-cmo
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ SenkuPlayer (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+EmitSwiftModule normal arm64 (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for SenkuPlayer (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriver\ Compilation\ Requirements SenkuPlayer normal arm64 com.apple.xcode.tools.swift.compiler (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name SenkuPlayer -Onone -enforce-exclusivity\=checked @/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -target arm64-apple-ios26.2 -g -module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos -F /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos -emit-localized-strings -emit-localized-strings-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3885c01c3e6b6a337905948deab2002e3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache -output-file-map /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/amalbajith/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer_const_extract_protocols.json -Xcc -iquote -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-generated-files.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-own-target-headers.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-all-target-headers.hmap -Xcc -iquote -Xcc /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/SenkuPlayer-project-headers.hmap -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/include -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources-normal/arm64 -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources/arm64 -Xcc -I/Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer-Swift.h -working-directory /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer -experimental-emit-module-separately -disable-cmo
+
+Copy /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftsourceinfo (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftsourceinfo /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo
+
+Copy /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/arm64-apple-ios.abi.json /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.abi.json (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.abi.json /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/arm64-apple-ios.abi.json
+
+Copy /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/arm64-apple-ios.swiftmodule /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftmodule (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Intermediates.noindex/SenkuPlayer.build/Debug-iphoneos/SenkuPlayer.build/Objects-normal/arm64/SenkuPlayer.swiftmodule /Users/amalbajith/Library/Developer/Xcode/DerivedData/SenkuPlayer-awolzuvpbrnztlflelwezjkbwzbv/Build/Products/Debug-iphoneos/SenkuPlayer.swiftmodule/arm64-apple-ios.swiftmodule
+
+SwiftCompile normal arm64 Compiling\ MiniPlayerView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/MiniPlayerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/MiniPlayerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling MiniPlayerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 Compiling\ WaveformView.swift,\ AlbumsListView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/Components/WaveformView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/AlbumsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/Components/WaveformView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+In flight operation:   <DVTOperationGroup: 0xbe46c2e80; state = AREfc>
+     <IDEBuildOperationGroup: 0xbe46c1e00; state = AREfc>
+         <DVTOperationGroup: 0xbe46c1f80; state = AREfc>
+             <IDEXCBuildSupportCore.IDEXCBuildServiceBuildOperation:0xbe66a4f00:AREfc>
+         <__DVTSwiftAsyncOperation: 0xbe46c2400; state = AReFc>
+         <__DVTSwiftAsyncOperation: 0xbe46c2700; state = AReFc>
+         <DVTOperation: 0xbe41e3700; state = arefc>
+         <__DVTSwiftAsyncOperation: 0xbe46c2280; state = AReFc>
+         <__DVTSwiftAsyncOperation: 0xbe46c2580; state = AReFc>
+         <DVTOperation: 0xbe41e35c0; state = aReFc>
+         <DVTOperation: 0xbe41e3840; state = arefc>
+         <DVTOperation: 0xbe41e3480; state = aReFc>
+<DVTOperationGroup: 0xbe46c2e80; state = AREfc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   -[DVTOperationGroup init] (in DVTFoundation)
+  2   +[DVTOperationGroup operationGroupWithSuboperations:] (in DVTFoundation)
+  3   -[IDEScheme _groupAndImposeDependenciesForOrderedOperations:] (in IDEFoundation)
+  4   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  5   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  6   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  8   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+  9   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 12   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 13   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 14   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 15   main (in xcodebuild)
+ 16   start (in dyld)
+
+<IDEBuildOperationGroup: 0xbe46c1e00; state = AREfc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   -[DVTOperationGroup init] (in DVTFoundation)
+  2   -[IDEBuildOperationGroup initWithBuildOperations:otherOperations:buildLog:] (in IDEFoundation)
+  3   -[IDEBuildOperationGroup initWithBuildOperations:buildLog:] (in IDEFoundation)
+  4   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  5   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  6   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  9   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 13   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 14   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 15   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 16   main (in xcodebuild)
+ 17   start (in dyld)
+
+<DVTOperationGroup: 0xbe46c1f80; state = AREfc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   -[DVTOperationGroup init] (in DVTFoundation)
+  2   +[DVTOperationGroup operationGroupWithSuboperations:] (in DVTFoundation)
+  3   -[IDEBuildOperationGroup initWithBuildOperations:otherOperations:buildLog:] (in IDEFoundation)
+  4   -[IDEBuildOperationGroup initWithBuildOperations:buildLog:] (in IDEFoundation)
+  5   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  6   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  7   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  9   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+ 10   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 13   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 14   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 15   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 16   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 17   main (in xcodebuild)
+ 18   start (in dyld)
+
+<IDEXCBuildSupportCore.IDEXCBuildServiceBuildOperation:0xbe66a4f00:AREfc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   -[IDEBuildOperation initWithConfiguration:] (in IDEFoundation)
+  2   specialized IDEXCBuildServiceBuildOperation.init(configuration:) (in IDEXCBuildSupportCore)
+  3   @objc IDEXCBuildServiceBuildOperation.init(configuration:) (in IDEXCBuildSupportCore)
+  4   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  5   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  6   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  9   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 13   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 14   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 15   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 16   main (in xcodebuild)
+ 17   start (in dyld)
+
+<__DVTSwiftAsyncOperation: 0xbe46c2400; state = AReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   @objc DVTAsyncOperation.init() (in DVTFoundation)
+  2   @objc static DVTOperation.operationWithMainThreadBlock(_:) (in DVTFoundation)
+  3   -[IDESchemeAction _setUpOperationsForPackageLoadingInWorkspace:handlePreActionsActivityLogSection:isCleanOperation:] (in IDEFoundation)
+  4   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  5   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  6   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  7   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  9   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+ 10   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 13   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 14   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 15   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 16   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 17   main (in xcodebuild)
+ 18   start (in dyld)
+
+<__DVTSwiftAsyncOperation: 0xbe46c2700; state = AReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   @objc DVTAsyncOperation.init() (in DVTFoundation)
+  2   static DVTOperation.awaiting(_:) (in DVTFoundation)
+  3   @objc static IDESchemeAction.operationToWaitForFinishedLoadingOperation(of:) (in IDEFoundation)
+  4   -[IDESchemeAction _setUpOperationsForPackageLoadingInWorkspace:handlePreActionsActivityLogSection:isCleanOperation:] (in IDEFoundation)
+  5   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  6   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  7   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  8   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  9   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+ 10   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+ 11   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 13   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 14   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 15   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 16   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 17   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 18   main (in xcodebuild)
+ 19   start (in dyld)
+
+<DVTOperation: 0xbe41e3700; state = arefc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   +[DVTOperation(DVTConveniences) operationWithBlock:] (in DVTFoundation)
+  2   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  3   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  4   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  5   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  6   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  8   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+  9   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 12   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 13   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 14   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 15   main (in xcodebuild)
+ 16   start (in dyld)
+
+<__DVTSwiftAsyncOperation: 0xbe46c2280; state = AReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   @objc DVTAsyncOperation.init() (in DVTFoundation)
+  2   static DVTOperation.awaiting(_:) (in DVTFoundation)
+  3   @objc static IDESchemeAction.operationToWaitForFinishedLoadingOperation(of:) (in IDEFoundation)
+  4   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  5   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  6   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  7   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  9   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+ 10   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 13   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 14   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 15   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 16   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 17   main (in xcodebuild)
+ 18   start (in dyld)
+
+<__DVTSwiftAsyncOperation: 0xbe46c2580; state = AReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   @objc DVTAsyncOperation.init() (in DVTFoundation)
+  2   @objc static DVTOperation.operationWithMainThreadBlock(_:) (in DVTFoundation)
+  3   -[IDESchemeAction _setUpOperationsForPackageLoadingInWorkspace:handlePreActionsActivityLogSection:isCleanOperation:] (in IDEFoundation)
+  4   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  5   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  6   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  7   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  8   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  9   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+ 10   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 12   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 13   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 14   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 15   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 16   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 17   main (in xcodebuild)
+ 18   start (in dyld)
+
+<DVTOperation: 0xbe41e35c0; state = aReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   +[DVTOperation(DVTConveniences) operationWithBlock:] (in DVTFoundation)
+  2   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  3   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  4   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  5   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  6   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  8   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+  9   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 12   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 13   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 14   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 15   main (in xcodebuild)
+ 16   start (in dyld)
+
+<DVTOperation: 0xbe41e3840; state = arefc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   +[DVTOperation(DVTConveniences) operationWithBlock:] (in DVTFoundation)
+  2   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  3   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  4   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:actionCallbackBlock:] (in IDEFoundation)
+  5   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  6   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  8   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+  9   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 12   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 13   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 14   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 15   main (in xcodebuild)
+ 16   start (in dyld)
+
+<DVTOperation: 0xbe41e3480; state = aReFc> created at:
+  0   -[DVTOperation init] (in DVTFoundation)
+  1   +[DVTOperation(DVTConveniences) operationWithBlock:] (in DVTFoundation)
+  2   -[IDESchemeAction setUpActionDependenciesForCorePhaseOperation:shouldRunPostActionsBlock:prePhaseEnvironmentPopulationBlock:postPhaseEnvironmentPopulationBlock:handlePreActionsActivityLogSection:handlePostActionsActivityLogSection:buildParameters:schemeActionResultOperation:error:] (in IDEFoundation)
+  3   -[IDEScheme _buildOperationGroupForSchemeOperationParameters:primaryBuildParameters:variantSpecifiers:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:schemeActionRecord:error:] (in IDEFoundation)
+  4   -[IDEScheme _executionOperationForSchemeOperationParameters:build:onlyBuild:buildParameters:title:buildLog:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:act
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/AlbumsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ LibraryView.swift,\ NearbyShareView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/LibraryView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/NearbyShareView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/LibraryView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/NearbyShareView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ ArtistsListView.swift,\ DownloadView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/ArtistsListView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/DownloadView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/ArtistsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/DownloadView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+/Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/DownloadView.swift:171:43: warning: 'javaScriptEnabled' was deprecated in iOS 14.0: Use WKWebpagePreferences.allowsContentJavaScript to disable content JavaScript on a per-navigation basis
+        webView.configuration.preferences.javaScriptEnabled = true
+                                          ^
+
+SwiftCompile normal arm64 Compiling\ SongsListView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SongsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SongsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ NowPlayingView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/NowPlayingView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/NowPlayingView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ PlaylistPickerView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/PlaylistPickerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/PlaylistPickerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ ContentView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/ContentView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/ContentView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ SplashScreenView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SplashScreenView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SplashScreenView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ PlaylistsListView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/PlaylistsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/PlaylistsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftCompile normal arm64 Compiling\ SettingsView.swift /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SettingsView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftCompile normal arm64 /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer/SenkuPlayer/Views/SettingsView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+    cd /Users/amalbajith/Development/Repos/SenkuMusic/SenkuPlayer
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling PlaylistPickerView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SplashScreenView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling NowPlayingView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling ContentView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SongsListView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling ArtistsListView.swift, DownloadView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SettingsView.swift (in target 'SenkuPlayer' from project 'SenkuPlayer')
+
+** BUILD INTERRUPTED **
+
+ionCallbackBlock:] (in IDEFoundation)
+  5   -[IDEScheme buildOnlyTaskForSchemeOperationParameters:buildLog:dontActuallyRunCommands:buildParameters:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  6   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:deviceAvailableChecker:error:completionBlock:] (in IDEFoundation)
+  7   -[IDEScheme schemeOperationForSchemeOperationParameters:buildLog:overridingProperties:overridingBuildConfiguration:dontActuallyRunCommands:restorePersistedBuildResults:error:completionBlock:] (in IDEFoundation)
+  8   -[Xcode3CommandLineBuildTool doSchemeBuildWithRunDestinations:runDestinationIdx:wantsSkip:buildActionTimingSection:timingSection:buildAction:isMoreDesinationsPending:actionResultBlock:title:buildLog:executionEnvironment:restorePersistedBuildResults:operationToEnqueue:error:] (in Xcode3Core)
+  9   -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] (in Xcode3Core)
+ 10   -[Xcode3CommandLineBuildTool _buildWithTimingSection:] (in Xcode3Core)
+ 11   -[Xcode3CommandLineBuildTool run] (in Xcode3Core)
+ 12   XcodeBuildMain (in libxcodebuildLoader.dylib)
+ 13   -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] (in xcodebuild)
+ 14   -[XcodebuildPreIDEHandler runWithArguments:] (in xcodebuild)
+ 15   main (in xcodebuild)
+ 16   start (in dyld)
+

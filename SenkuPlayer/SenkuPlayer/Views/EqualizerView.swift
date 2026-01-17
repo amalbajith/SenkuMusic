@@ -18,7 +18,7 @@ struct EqualizerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.edgesIgnoringSafeArea(.all)
+                ModernTheme.backgroundPrimary.edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 20) {
                     // Header
@@ -111,7 +111,7 @@ struct EqualizerView: View {
                     Spacer()
                 }
             }
-            .navigationBarHidden(true)
+           // .navigationBarHidden(true)
         }
     }
     

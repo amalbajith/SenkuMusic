@@ -21,24 +21,27 @@ struct AlbumsListView: View {
     }
     
     var body: some View {
-        if filteredAlbums.isEmpty {
-            EmptyLibraryView()
-        } else {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
-                    ForEach(filteredAlbums, id: \.id) { album in
-                        NavigationLink(destination: AlbumDetailView(album: album)) {
-                            AlbumGridItem(album: album)
+        Group {
+            if filteredAlbums.isEmpty {
+                EmptyLibraryView()
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
+                        ForEach(filteredAlbums, id: \.id) { album in
+                            NavigationLink(destination: AlbumDetailView(album: album)) {
+                                AlbumGridItem(album: album)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .padding()
                 }
-                .padding()
-            }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
             }
         }
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -74,15 +77,17 @@ struct AlbumGridItem: View {
             }
             
             // Album Info
-            Text(album.name)
+            Text(album.name.normalizedForDisplay)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .lineLimit(1)
+                .truncationMode(.tail)
             
-            Text(album.artist)
+            Text(album.artist.normalizedForDisplay)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 }
@@ -195,6 +200,7 @@ struct AlbumSongRow: View {
     let song: Song
     let trackNumber: Int
     let isPlaying: Bool
+    @ObservedObject var player = AudioPlayerManager.shared
     
     var body: some View {
         HStack(spacing: 12) {
@@ -206,18 +212,21 @@ struct AlbumSongRow: View {
             
             // Song Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(song.title)
+                Text(song.title.normalizedForDisplay)
                     .font(.body)
                     .foregroundColor(isPlaying ? .blue : .primary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 if song.artist != song.album {
-                    Text(song.artist)
+                    Text(song.artist.normalizedForDisplay)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
             Spacer()
             
@@ -227,6 +236,26 @@ struct AlbumSongRow: View {
                     .foregroundColor(.blue)
                     .symbolEffect(.variableColor.iterative)
             } else {
+                Menu {
+                    Button {
+                        player.playNext(song: song)
+                    } label: {
+                        Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                    }
+                    
+                    Button {
+                        FavoritesManager.shared.toggleFavorite(song: song)
+                    } label: {
+                        let isFav = FavoritesManager.shared.isFavorite(song: song)
+                        Label(isFav ? "Remove from Favorites" : "Favorite",
+                              systemImage: isFav ? "heart.slash.fill" : "heart")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                }
+
                 Text(formatDuration(song.duration))
                     .font(.caption)
                     .foregroundColor(.secondary)

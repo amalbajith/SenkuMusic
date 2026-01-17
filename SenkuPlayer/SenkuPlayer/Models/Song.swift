@@ -2,27 +2,39 @@
 //  Song.swift
 //  SenkuPlayer
 //
-//  Created by Amal on 30/12/25.
-//
 
 import Foundation
 import AVFoundation
 
 struct Song: Identifiable, Codable, Equatable {
     let id: UUID
-    let url: URL
+    var url: URL
     var title: String
     var artist: String
     var album: String
     var albumArtist: String?
     var duration: TimeInterval
-    var artworkData: Data?
     var genre: String?
     var year: Int?
     var trackNumber: Int?
     var discNumber: Int?
     
-    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, artworkData: Data? = nil, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil) {
+    // Playback Stats
+    var lastPlayedDate: Date?
+    var playCount: Int = 0
+    
+    // We remove artworkData from the struct to save memory
+    // Instead, views can fetch it from ArtworkManager or MusicLibraryManager
+    var hasArtwork: Bool = false
+    
+    // In-memory artwork cache for currently playing or visible songs (Managed externally)
+    // Coding/Decoding will ignore artworkData if we use CodingKeys
+    
+    enum CodingKeys: String, CodingKey {
+        case id, url, title, artist, album, albumArtist, duration, genre, year, trackNumber, discNumber, hasArtwork, lastPlayedDate, playCount
+    }
+    
+    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil, hasArtwork: Bool = false, lastPlayedDate: Date? = nil, playCount: Int = 0) {
         self.id = id
         self.url = url
         self.title = title
@@ -30,21 +42,28 @@ struct Song: Identifiable, Codable, Equatable {
         self.album = album
         self.albumArtist = albumArtist
         self.duration = duration
-        self.artworkData = artworkData
         self.genre = genre
         self.year = year
         self.trackNumber = trackNumber
         self.discNumber = discNumber
+        self.hasArtwork = hasArtwork
+        self.lastPlayedDate = lastPlayedDate
+        self.playCount = playCount
     }
     
     static func == (lhs: Song, rhs: Song) -> Bool {
         lhs.id == rhs.id
     }
+    
+    /// Helper to get cached artwork data
+    var artworkData: Data? {
+        return ArtworkManager.shared.getArtwork(for: self.id)
+    }
 }
 
 // MARK: - Metadata Extraction
 extension Song {
-    static func fromURL(_ url: URL) async -> Song? {
+    static func fromURL(_ url: URL) async -> (Song, Data?)? {
         let asset = AVURLAsset(url: url)
 
         var title = url.deletingPathExtension().lastPathComponent
@@ -58,15 +77,11 @@ extension Song {
         var trackNumber: Int?
         var discNumber: Int?
 
-        // Load duration asynchronously to avoid blocking lower QoS threads
         do {
             let time = try await asset.load(.duration)
             duration = time.seconds
-        } catch {
-            // Keep default duration = 0
-        }
+        } catch {}
 
-        // Load common metadata asynchronously
         let commonMetadata: [AVMetadataItem]
         do {
             commonMetadata = try await asset.load(.commonMetadata)
@@ -92,12 +107,9 @@ extension Song {
                 default:
                     break
                 }
-            } catch {
-                print("Error loading metadata for \(key): \(error)")
-            }
+            } catch {}
         }
 
-        // Load available metadata formats asynchronously (iOS 16+ API)
         let formats: [AVMetadataFormat]
         do {
             formats = try await asset.load(.availableMetadataFormats)
@@ -105,7 +117,6 @@ extension Song {
             formats = []
         }
 
-        // For each format, load its metadata asynchronously and parse additional tags
         for format in formats {
             let formatMetadata: [AVMetadataItem]
             do {
@@ -115,25 +126,21 @@ extension Song {
             }
 
             for item in formatMetadata {
-                // Prefer stringValue to avoid bridging issues
                 if let keyString = (item.key as? String) ?? item.identifier?.rawValue {
                     switch keyString {
                     case "TPE2", "©ART": // Album Artist
                         if let value = try? await item.load(.stringValue) { albumArtist = value }
                     case "TDRC", "©day": // Year
                         if let value = try? await item.load(.stringValue) {
-                            let yearString = value.prefix(4)
-                            year = Int(yearString)
+                            year = Int(value.prefix(4))
                         }
                     case "TRCK": // Track Number
                         if let value = try? await item.load(.stringValue) {
-                            let components = value.split(separator: "/")
-                            if let first = components.first { trackNumber = Int(first) }
+                            trackNumber = Int(value.split(separator: "/").first ?? "")
                         }
                     case "TPOS": // Disc Number
                         if let value = try? await item.load(.stringValue) {
-                            let components = value.split(separator: "/")
-                            if let first = components.first { discNumber = Int(first) }
+                            discNumber = Int(value.split(separator: "/").first ?? "")
                         }
                     default:
                         break
@@ -142,11 +149,11 @@ extension Song {
             }
         }
 
-        // Generate a stable ID based on the URL path
+        // Generate a stable ID
         let stableString = url.lastPathComponent
         let id = UUID(uuidString: stableString.padTo32()) ?? UUID()
 
-        return Song(
+        let song = Song(
             id: id,
             url: url,
             title: title,
@@ -154,39 +161,32 @@ extension Song {
             album: album,
             albumArtist: albumArtist,
             duration: duration,
-            artworkData: artworkData,
             genre: genre,
             year: year,
             trackNumber: trackNumber,
-            discNumber: discNumber
+            discNumber: discNumber,
+            hasArtwork: artworkData != nil
         )
+        
+        return (song, artworkData)
     }
-
-
 }
 
 private extension String {
     func padTo32() -> String {
         let hash = self.hashString()
-        // Format as UUID: 8-4-4-4-12
         let h = hash.padding(toLength: 32, withPad: "0", startingAt: 0)
         let i = h.index(h.startIndex, offsetBy: 8)
         let j = h.index(i, offsetBy: 4)
         let k = h.index(j, offsetBy: 4)
         let l = h.index(k, offsetBy: 4)
-        
         return "\(h[..<i])-\(h[i..<j])-\(h[j..<k])-\(h[k..<l])-\(h[l...])"
     }
     
     func hashString() -> String {
         let data = Data(self.utf8)
-
-        // Simple hash to get a hex string
         var h: UInt64 = 5381
-        for byte in data {
-            h = ((h << 5) &+ h) &+ UInt64(byte)
-        }
-        // Let's use a bit more robust hex representation
+        for byte in data { h = ((h << 5) &+ h) &+ UInt64(byte) }
         return String(format: "%016llx%016llx", h, h.reversed())
     }
 }

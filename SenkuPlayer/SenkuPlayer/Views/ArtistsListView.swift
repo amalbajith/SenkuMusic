@@ -21,21 +21,24 @@ struct ArtistsListView: View {
     }
     
     var body: some View {
-        if filteredArtists.isEmpty {
-            EmptyLibraryView()
-        } else {
-            List {
-                ForEach(filteredArtists, id: \.id) { artist in
-                    NavigationLink(destination: ArtistDetailView(artist: artist)) {
-                        ArtistRow(artist: artist)
+        Group {
+            if filteredArtists.isEmpty {
+                EmptyLibraryView()
+            } else {
+                List {
+                    ForEach(filteredArtists, id: \.id) { artist in
+                        NavigationLink(destination: ArtistDetailView(artist: artist)) {
+                            ArtistRow(artist: artist)
+                        }
                     }
                 }
-            }
-            .listStyle(.plain)
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                .listStyle(.plain)
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                }
             }
         }
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -73,14 +76,19 @@ struct ArtistRow: View {
             
             // Artist Info
             VStack(alignment: .leading, spacing: 4) {
-                Text(artist.name)
+                Text(artist.name.normalizedForDisplay)
                     .font(.body)
                     .fontWeight(.medium)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 
                 Text("\(artist.totalAlbums) album\(artist.totalAlbums != 1 ? "s" : ""), \(artist.totalSongs) song\(artist.totalSongs != 1 ? "s" : "")")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
             Spacer()
         }
@@ -184,7 +192,7 @@ struct ArtistDetailView: View {
                     
                     VStack(spacing: 0) {
                         ForEach(Array(artist.songs.enumerated()), id: \.element.id) { index, song in
-                            SongRow(
+                            SimpleSongRow(
                                 song: song,
                                 isPlaying: player.currentSong?.id == song.id && player.isPlaying,
                                 isSelected: false,
@@ -248,10 +256,11 @@ struct ArtistAlbumItem: View {
             }
             
             // Album Info
-            Text(album.name)
+            Text(album.name.normalizedForDisplay)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(width: 140, alignment: .leading)
             
             if let year = album.year {
