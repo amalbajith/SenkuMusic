@@ -111,6 +111,7 @@ class MultipeerManager: NSObject, ObservableObject {
 struct SongIdentity: Codable, Hashable {
     let title: String
     let artist: String
+    let album: String
 }
 
 struct SyncMessage: Codable {
@@ -126,7 +127,7 @@ extension MultipeerManager {
     func startSmartSync() {
         Task { @MainActor in
             let songs = MusicLibraryManager.shared.songs
-            let catalog = songs.map { SongIdentity(title: $0.title, artist: $0.artist) }
+            let catalog = songs.map { SongIdentity(title: $0.title, artist: $0.artist, album: $0.album) }
             let message = SyncMessage(kind: .catalog, items: catalog)
             
             if let data = try? JSONEncoder().encode(message),
@@ -148,11 +149,11 @@ extension MultipeerManager {
                 print("📥 Received catalog from \(peerID.displayName)")
                 // Compare catalogs
                 let remoteSet = Set(message.items)
-                let localSet = Set(localSongs.map { SongIdentity(title: $0.title, artist: $0.artist) })
+                let localSet = Set(localSongs.map { SongIdentity(title: $0.title, artist: $0.artist, album: $0.album) })
                 
                 // 1. Identify what Peer LACKS (I have, Peer doesn't) -> SEND
                 let toSend = localSongs.filter {
-                    !remoteSet.contains(SongIdentity(title: $0.title, artist: $0.artist))
+                    !remoteSet.contains(SongIdentity(title: $0.title, artist: $0.artist, album: $0.album))
                 }
                 
                 // 2. Identify what I LACK (Peer has, I don't) -> REQUEST
@@ -180,7 +181,7 @@ extension MultipeerManager {
                 // Peer wants these songs
                 let requestedSet = Set(message.items)
                 let songsToSend = localSongs.filter {
-                    requestedSet.contains(SongIdentity(title: $0.title, artist: $0.artist))
+                    requestedSet.contains(SongIdentity(title: $0.title, artist: $0.artist, album: $0.album))
                 }
                 
                 Task.detached {

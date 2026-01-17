@@ -52,12 +52,21 @@ class MusicLibraryManager: ObservableObject {
                 
                 let allowedExtensions = ["mp3", "m4a", "wav", "aac", "flac", "aiff"]
                 if allowedExtensions.contains(url.pathExtension.lowercased()) {
-                    let dest = musicDir.appendingPathComponent(url.lastPathComponent)
-                    if !self.fileManager.fileExists(atPath: dest.path) {
-                        try? self.fileManager.copyItem(at: url, to: dest)
+                    // Safe Copy with Rename to prevent overwrite
+                    var finalURL = musicDir.appendingPathComponent(url.lastPathComponent)
+                    if self.fileManager.fileExists(atPath: finalURL.path) {
+                        let name = url.deletingPathExtension().lastPathComponent
+                        let ext = url.pathExtension
+                        var counter = 1
+                        while self.fileManager.fileExists(atPath: finalURL.path) {
+                             finalURL = musicDir.appendingPathComponent("\(name) \(counter).\(ext)")
+                             counter += 1
+                        }
                     }
                     
-                    if let (song, artwork) = await Song.fromURL(dest) {
+                    try? self.fileManager.copyItem(at: url, to: finalURL)
+                    
+                    if let (song, artwork) = await Song.fromURL(finalURL) {
                         if let artwork = artwork {
                             ArtworkManager.shared.saveArtwork(artwork, for: song.id)
                         }
@@ -71,8 +80,18 @@ class MusicLibraryManager: ObservableObject {
             
             await MainActor.run {
                 for newSong in foundSongs {
-                    if !self.songs.contains(where: { $0.id == newSong.id }) {
+                    // Deduplicate by Metadata (Title + Artist + Album)
+                    let isDuplicate = self.songs.contains {
+                        $0.title == newSong.title &&
+                        $0.artist == newSong.artist &&
+                        $0.album == newSong.album
+                    }
+                    
+                    if !isDuplicate {
                         self.songs.append(newSong)
+                    } else {
+                        // Cleanup orphan file
+                        try? self.fileManager.removeItem(at: newSong.url)
                     }
                 }
                 self.organizeLibrary()
@@ -94,10 +113,25 @@ class MusicLibraryManager: ObservableObject {
                     ArtworkManager.shared.saveArtwork(artwork, for: song.id)
                 }
                 
-                if !self.songs.contains(where: { $0.id == song.id }) {
+                // Deduplicate by Metadata
+                let isDuplicate = self.songs.contains {
+                    $0.title == song.title &&
+                    $0.artist == song.artist &&
+                    $0.album == song.album
+                }
+                
+                if !isDuplicate {
                     self.songs.append(song)
                     self.organizeLibrary()
                     self.saveSongs()
+                } else {
+                    // If Sync confused and sent duplicate file (not overwrite), clean it up
+                    // But be careful: If Sync Overwrote `file.mp3`, and we have entry for `file.mp3`.
+                    // We keep entry. Use file.
+                    // If Sync sent `file 1.mp3` (duplicate content), we delete `file 1.mp3`.
+                    if !self.songs.contains(where: { $0.url == song.url }) {
+                         try? self.fileManager.removeItem(at: song.url)
+                    }
                 }
             }
             // Auto fetch metadata if needed
