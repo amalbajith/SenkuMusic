@@ -71,25 +71,22 @@ class MultipeerManager: NSObject, ObservableObject {
         serviceBrowser.invitePeer(peer, to: session, withContext: nil, timeout: 30)
     }
     
-    func sendSong(_ url: URL, to peer: MCPeerID) {
-        guard session.connectedPeers.contains(peer) else { 
-            print("⚠️ Cannot send: Peer not connected in session")
-            return 
-        }
+    func sendSong(_ url: URL, to peer: MCPeerID) async throws {
+        guard session.connectedPeers.contains(peer) else { return }
         
-        print("📤 Starting send to \(peer.displayName): \(url.lastPathComponent)")
-        DispatchQueue.main.async { 
+        await MainActor.run { 
             self.activeTransferCount += 1 
             self.syncDetails = "Sending: \(url.lastPathComponent.replacingOccurrences(of: ".mp3", with: ""))"
         }
         
-        session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { [weak self] error in
-            DispatchQueue.main.async {
-                self?.activeTransferCount -= 1
+        return await withCheckedContinuation { continuation in
+            session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { error in
+                Task { @MainActor in self.activeTransferCount -= 1 }
                 if let error = error {
                     print("❌ Error sending file: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
                 } else {
-                    print("✅ Successfully sent file to \(peer.displayName)")
+                    continuation.resume()
                 }
             }
         }
@@ -174,8 +171,7 @@ extension MultipeerManager {
                 // Send Files (Async Task)
                 Task.detached {
                     for song in toSend {
-                        self.sendSong(song.url, to: peerID)
-                        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s throttle
+                        try? await self.sendSong(song.url, to: peerID)
                     }
                 }
                 
@@ -189,8 +185,7 @@ extension MultipeerManager {
                 
                 Task.detached {
                     for song in songsToSend {
-                        self.sendSong(song.url, to: peerID)
-                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        try? await self.sendSong(song.url, to: peerID)
                     }
                 }
             }
