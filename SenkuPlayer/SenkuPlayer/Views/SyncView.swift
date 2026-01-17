@@ -28,24 +28,24 @@ struct SyncView: View {
                                 .frame(width: 160, height: 160)
                             
                             Circle()
-                                .stroke(isSyncing || multipeer.isReceiving ? ModernTheme.accentYellow : Color.gray.opacity(0.3), lineWidth: 2)
+                                .stroke(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : Color.gray.opacity(0.3), lineWidth: 2)
                                 .frame(width: 160, height: 160)
                                 .overlay(
                                     Circle()
-                                        .trim(from: 0, to: isSyncing || multipeer.isReceiving ? 0.75 : 0)
+                                        .trim(from: 0, to: isSyncing || multipeer.isReceiving || multipeer.isSending ? 0.75 : 0)
                                         .stroke(ModernTheme.accentYellow, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                                         .frame(width: 160, height: 160)
-                                        .rotationEffect(.degrees(isSyncing || multipeer.isReceiving ? 360 : 0))
-                                        .animation((isSyncing || multipeer.isReceiving) ? Animation.linear(duration: 2).repeatForever(autoreverses: false) : .default, value: isSyncing || multipeer.isReceiving)
+                                        .rotationEffect(.degrees(isSyncing || multipeer.isReceiving || multipeer.isSending ? 360 : 0))
+                                        .animation((isSyncing || multipeer.isReceiving || multipeer.isSending) ? Animation.linear(duration: 2).repeatForever(autoreverses: false) : .default, value: isSyncing || multipeer.isReceiving || multipeer.isSending)
                                 )
                             
-                            Image(systemName: multipeer.isReceiving ? "arrow.down.circle" : "arrow.triangle.2.circlepath")
+                            Image(systemName: multipeer.isReceiving ? "arrow.down.circle" : (multipeer.isSending ? "arrow.up.circle" : "arrow.triangle.2.circlepath"))
                                 .font(.system(size: 60))
-                                .foregroundColor(isSyncing || multipeer.isReceiving ? ModernTheme.accentYellow : .gray)
+                                .foregroundColor(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : .gray)
                         }
                         .padding(.top, 40)
                         
-                        Text(multipeer.isReceiving ? "Receiving Library..." : syncStatus)
+                        Text(multipeer.isReceiving ? "Receiving Library..." : (multipeer.isSending ? "Sending Library..." : syncStatus))
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)

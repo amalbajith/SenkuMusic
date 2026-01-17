@@ -25,6 +25,9 @@ class MultipeerManager: NSObject, ObservableObject {
     @Published var showReceivedNotification = false
     @Published var isReceiving = false
     @Published var isSending = false
+    private var activeTransferCount = 0 {
+        didSet { isSending = activeTransferCount > 0 }
+    }
     @Published var transferProgress: Double = 0
     
     // Track connecting peers
@@ -74,11 +77,11 @@ class MultipeerManager: NSObject, ObservableObject {
         }
         
         print("📤 Starting send to \(peer.displayName): \(url.lastPathComponent)")
-        DispatchQueue.main.async { self.isSending = true }
+        DispatchQueue.main.async { self.activeTransferCount += 1 }
         
         session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { [weak self] error in
             DispatchQueue.main.async {
-                self?.isSending = false
+                self?.activeTransferCount -= 1
                 if let error = error {
                     print("❌ Error sending file: \(error.localizedDescription)")
                 } else {
