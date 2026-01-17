@@ -125,17 +125,8 @@ struct NowPlayingView: View {
                 let screenWidth = NSScreen.main?.frame.width ?? 800
                 #endif
                 let size = min(screenWidth - 100, 260)
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .cornerRadius(ModernTheme.cardRadius)
-                    .shadow(
-                        color: ModernTheme.cardShadow.color,
-                        radius: ModernTheme.cardShadow.radius,
-                        x: ModernTheme.cardShadow.x,
-                        y: ModernTheme.cardShadow.y
-                    )
+                
+                CubeArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
                     .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.95))
                     .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
             } else {
@@ -145,23 +136,92 @@ struct NowPlayingView: View {
                 let screenWidth = NSScreen.main?.frame.width ?? 800
                 #endif
                 let size = min(screenWidth - 100, 260)
-                RoundedRectangle(cornerRadius: ModernTheme.cardRadius)
-                    .fill(ModernTheme.cardGradient)
-                    .frame(width: size, height: size)
-                    .overlay {
+                
+                // Fallback Cube
+                CubeArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
+                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.95))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
+            }
+        }
+    }
+    
+    // MARK: - 3D Cube Component
+    struct CubeArtworkView: View {
+        let platformImage: PlatformImage?
+        let size: CGFloat
+        let glowingColor: Color
+        
+        @State private var rotation: Double = 0
+        @State private var glowPulse: Bool = false
+        
+        var body: some View {
+            ZStack {
+                // Dynamic Glowing Background
+                glowingColor
+                    .opacity(0.6)
+                    .frame(width: size * 0.9, height: size * 0.9)
+                    .blur(radius: 60)
+                    .scaleEffect(glowPulse ? 1.2 : 1.0)
+                    .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: glowPulse)
+                
+                // 3D Cube Faces
+                ZStack {
+                    face(angle: 0)   // Front
+                    face(angle: 90)  // Right
+                    face(angle: 180) // Back
+                    face(angle: 270) // Left
+                }
+                .rotation3DEffect(
+                    .degrees(rotation),
+                    axis: (x: 0, y: 1, z: 0),
+                    anchorZ: -size/2,
+                    perspective: 0.3
+                )
+            }
+            .frame(width: size, height: size)
+            .onAppear {
+                glowPulse = true
+                // Continuous slow rotation
+                withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+        }
+        
+        @ViewBuilder
+        func face(angle: Double) -> some View {
+            Group {
+                if let image = platformImage {
+                    Image(platformImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    // Fallback visual
+                    ZStack {
+                        ModernTheme.cardGradient
                         Image(systemName: "music.note")
                             .font(.system(size: 80))
                             .foregroundColor(.white.opacity(0.8))
                     }
-                    .shadow(
-                        color: ModernTheme.cardShadow.color,
-                        radius: ModernTheme.cardShadow.radius,
-                        x: ModernTheme.cardShadow.x,
-                        y: ModernTheme.cardShadow.y
-                    )
-                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.95))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
+                }
             }
+            .frame(width: size, height: size)
+            .clipped()
+            .overlay(
+                // Shine/Reflection effect
+                LinearGradient(
+                    colors: [.white.opacity(0.2), .clear, .black.opacity(0.3)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .border(Color.white.opacity(0.1), width: 0.5) // Subtle edge
+            .rotation3DEffect(
+                .degrees(angle),
+                axis: (x: 0, y: 1, z: 0),
+                anchorZ: -size/2,
+                perspective: 0.3
+            )
         }
     }
     
