@@ -94,8 +94,7 @@ struct NowPlayingView: View {
                     .font(.title3)
                     .foregroundColor(.white)
                     .frame(width: 44, height: 44)
-                    .background(Color.white.opacity(0.1))
-                    .glassmorphism(cornerRadius: 22)
+                    .contentShape(Rectangle())
             }
             
             Spacer()
@@ -211,26 +210,17 @@ struct NowPlayingView: View {
                         .font(.title)
                         .foregroundColor(.white)
                         .frame(width: 60, height: 60)
-                        .background(ModernTheme.mediumGray)
-                        .clipShape(Circle())
+                        .contentShape(Rectangle())
                 }
                 
                 // Play/Pause - The Star Button
                 Button {
                     player.togglePlayPause()
                 } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title)
-                        .foregroundColor(ModernTheme.pureBlack)
-                        .frame(width: 80, height: 80)
-                        .background(ModernTheme.accentYellow)
-                        .clipShape(Circle())
-                        .shadow(
-                            color: ModernTheme.accentYellow.opacity(0.5),
-                            radius: 20,
-                            x: 0,
-                            y: 10
-                        )
+                    Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.white)
+                        .contentShape(Circle())
                 }
                 
                 // Next
@@ -241,8 +231,7 @@ struct NowPlayingView: View {
                         .font(.title)
                         .foregroundColor(.white)
                         .frame(width: 60, height: 60)
-                        .background(ModernTheme.mediumGray)
-                        .clipShape(Circle())
+                        .contentShape(Rectangle())
                 }
             }
             

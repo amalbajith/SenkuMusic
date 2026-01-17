@@ -31,9 +31,12 @@ struct ContentView: View {
         } message: {
             Text("'\(multipeer.invitationSenderName)' wants to connect for device transfer.")
         }
+
+        #if os(iOS)
         .sheet(isPresented: $player.isNowPlayingPresented) {
             NowPlayingView()
         }
+        #endif
     }
 }
 

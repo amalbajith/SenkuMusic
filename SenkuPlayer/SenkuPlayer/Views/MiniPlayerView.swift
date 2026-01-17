@@ -113,10 +113,11 @@ struct MiniPlayerView: View {
             }
             .frame(height: 64)
             .padding(.horizontal, 12)
+            .offset(y: dragOffset)
+            #if os(iOS)
             .onTapGesture {
                 player.isNowPlayingPresented = true
             }
-            .offset(y: dragOffset)
             .gesture(
                 DragGesture()
                     .onChanged { value in
@@ -140,6 +141,7 @@ struct MiniPlayerView: View {
                         }
                     }
             )
+            #endif
         }
     }
 }
