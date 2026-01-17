@@ -79,7 +79,7 @@ class MultipeerManager: NSObject, ObservableObject {
             self.syncDetails = "Sending: \(url.lastPathComponent.replacingOccurrences(of: ".mp3", with: ""))"
         }
         
-        return await withCheckedContinuation { continuation in
+        return await withCheckedThrowingContinuation { continuation in
             session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { error in
                 Task { @MainActor in self.activeTransferCount -= 1 }
                 if let error = error {
