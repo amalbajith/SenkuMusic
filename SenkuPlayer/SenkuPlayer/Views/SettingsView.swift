@@ -273,7 +273,7 @@ struct SettingsView: View {
                 Button {
                     handleVersionTap()
                 } label: {
-                    SettingsInfoRow(title: "Version", value: "1.6.0")
+                    SettingsInfoRow(title: "Version", value: "1.7.0")
                 }
                 .buttonStyle(.plain)
                 

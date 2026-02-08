@@ -10,9 +10,17 @@ import MultipeerConnectivity
 
 struct SyncView: View {
     @StateObject private var multipeer = MultipeerManager.shared
-    @State private var isSyncing = false
-    @State private var progress: Double = 0.0
-    @State private var syncStatus = "Ready to Sync"
+    
+    private var isSyncActive: Bool {
+        multipeer.isSyncingCatalog || multipeer.isSending || multipeer.isReceiving
+    }
+    
+    private var statusText: String {
+        if !multipeer.syncDetails.isEmpty && isSyncActive {
+            return multipeer.syncDetails
+        }
+        return multipeer.syncStatus
+    }
     
     var body: some View {
         NavigationStack {
@@ -24,28 +32,28 @@ struct SyncView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(isSyncing ? ModernTheme.accentYellow.opacity(0.1) : ModernTheme.backgroundSecondary)
+                                .fill(isSyncActive ? ModernTheme.accentYellow.opacity(0.1) : ModernTheme.backgroundSecondary)
                                 .frame(width: 160, height: 160)
                             
                             Circle()
-                                .stroke(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : ModernTheme.borderSubtle, lineWidth: 2)
+                                .stroke(isSyncActive ? ModernTheme.accentYellow : ModernTheme.borderSubtle, lineWidth: 2)
                                 .frame(width: 160, height: 160)
                                 .overlay(
                                     Circle()
-                                        .trim(from: 0, to: isSyncing || multipeer.isReceiving || multipeer.isSending ? 0.75 : 0)
+                                        .trim(from: 0, to: isSyncActive ? 0.75 : 0)
                                         .stroke(ModernTheme.accentYellow, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                                         .frame(width: 160, height: 160)
-                                        .rotationEffect(.degrees(isSyncing || multipeer.isReceiving || multipeer.isSending ? 360 : 0))
-                                        .animation((isSyncing || multipeer.isReceiving || multipeer.isSending) ? Animation.linear(duration: 2).repeatForever(autoreverses: false) : .default, value: isSyncing || multipeer.isReceiving || multipeer.isSending)
+                                        .rotationEffect(.degrees(isSyncActive ? 360 : 0))
+                                        .animation(isSyncActive ? Animation.linear(duration: 2).repeatForever(autoreverses: false) : .default, value: isSyncActive)
                                 )
                             
-                            Image(systemName: multipeer.isReceiving ? "arrow.down.circle" : (multipeer.isSending ? "arrow.up.circle" : "arrow.triangle.2.circlepath"))
+                            Image(systemName: multipeer.isReceiving ? "arrow.down.circle" : (multipeer.isSending ? "arrow.up.circle" : (multipeer.isSyncingCatalog ? "clock.arrow.circlepath" : "arrow.triangle.2.circlepath")))
                                 .font(.system(size: 60))
-                                .foregroundColor(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : ModernTheme.textTertiary)
+                                .foregroundColor(isSyncActive ? ModernTheme.accentYellow : ModernTheme.textTertiary)
                         }
                         .padding(.top, 40)
                         
-                        Text((multipeer.isSending || multipeer.isReceiving) && !multipeer.syncDetails.isEmpty ? multipeer.syncDetails : syncStatus)
+                        Text(statusText)
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
@@ -114,18 +122,18 @@ struct SyncView: View {
                     
                     // Progress & Action
                     VStack(spacing: 20) {
-                        if isSyncing {
+                        if isSyncActive || multipeer.transferProgress > 0 {
                             VStack(spacing: 8) {
-                                ProgressView(value: progress, total: 1.0)
+                                ProgressView(value: multipeer.transferProgress, total: 1.0)
                                     .tint(ModernTheme.accentYellow)
                                 
                                 HStack {
-                                    Text("\(Int(progress * 100))%")
+                                    Text("\(Int(multipeer.transferProgress * 100))%")
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(ModernTheme.accentYellow)
                                     Spacer()
-                                    Text("Transferring Library...")
+                                    Text("Sent \(multipeer.sentFilesCount) • Received \(multipeer.receivedFilesCount)")
                                         .font(.caption)
                                         .foregroundColor(ModernTheme.textSecondary)
                                 }
@@ -136,21 +144,21 @@ struct SyncView: View {
                         Button {
                             startSync()
                         } label: {
-                            Text(isSyncing ? "Cancel Sync" : "Start Sync")
+                            Text(isSyncActive ? "Syncing..." : "Start Sync")
                                 .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(
-                                    isSyncing 
+                                    isSyncActive
                                     ? LinearGradient(colors: [ModernTheme.mediumGray, ModernTheme.mediumGray], startPoint: .top, endPoint: .bottom)
                                     : ModernTheme.accentGradient
                                 )
                                 .cornerRadius(16)
                         }
-                        .disabled(multipeer.connectedPeers.isEmpty && !isSyncing) // Only disabled if NOT connected and NOT syncing.
-                        .opacity(multipeer.connectedPeers.isEmpty && !isSyncing ? 0.5 : 1)
+                        .disabled(multipeer.connectedPeers.isEmpty || isSyncActive)
+                        .opacity(multipeer.connectedPeers.isEmpty || isSyncActive ? 0.5 : 1)
                         .padding(.horizontal, 40)
                         .padding(.bottom, 30)
                     }
@@ -174,26 +182,16 @@ struct SyncView: View {
     
     private func startSync() {
         guard !multipeer.connectedPeers.isEmpty else {
-            syncStatus = "No device connected"
+            multipeer.syncStatus = "No device connected"
             return
         }
         
-        // Prevent multiple syncs (UI protection)
-        guard !isSyncing else { return }
-        
-        isSyncing = true
-        syncStatus = "Proposing Smart Sync..."
-        
-        // Start Protocol
+        guard !isSyncActive else { return }
+        multipeer.syncStatus = "Preparing smart sync..."
+        multipeer.syncDetails = ""
+        multipeer.sentFilesCount = 0
+        multipeer.receivedFilesCount = 0
         multipeer.startSmartSync()
-        
-        // Reset button state after delay (actual transfer happens in background)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation {
-                self.isSyncing = false
-                self.syncStatus = "Catalog Sent"
-            }
-        }
     }
 }
 
