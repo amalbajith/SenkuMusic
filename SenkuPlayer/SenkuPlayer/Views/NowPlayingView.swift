@@ -116,81 +116,36 @@ struct NowPlayingView: View {
     // MARK: - Album Artwork
     private var albumArtwork: some View {
         Group {
+            #if os(iOS)
+            let screenWidth = UIScreen.main.bounds.width
+            #else
+            let screenWidth = NSScreen.main?.frame.width ?? 800
+            #endif
+            let size = min(screenWidth - 80, 350)
+            
             if let song = player.currentSong,
                let artworkData = song.artworkData,
                let platformImage = PlatformImage.fromData(artworkData) {
-                #if os(iOS)
-                let screenWidth = UIScreen.main.bounds.width
-                #else
-                let screenWidth = NSScreen.main?.frame.width ?? 800
-                #endif
-                let size = min(screenWidth - 100, 260)
                 
-                CubeArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
-                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.95))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
+                ArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
+                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: player.isPlaying)
             } else {
-                #if os(iOS)
-                let screenWidth = UIScreen.main.bounds.width
-                #else
-                let screenWidth = NSScreen.main?.frame.width ?? 800
-                #endif
-                let size = min(screenWidth - 100, 260)
-                
-                // Fallback Cube
-                CubeArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
-                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.95))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: player.isPlaying)
+                // Fallback
+                ArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
+                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: player.isPlaying)
             }
         }
     }
     
-    // MARK: - 3D Cube Component
-    struct CubeArtworkView: View {
+    // MARK: - Artwork Component
+    struct ArtworkView: View {
         let platformImage: PlatformImage?
         let size: CGFloat
         let glowingColor: Color
         
-        @State private var rotation: Double = 0
-        @State private var glowPulse: Bool = false
-        
         var body: some View {
-            ZStack {
-                // Dynamic Glowing Background
-                glowingColor
-                    .opacity(0.6)
-                    .frame(width: size * 0.9, height: size * 0.9)
-                    .blur(radius: 60)
-                    .scaleEffect(glowPulse ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 2).repeatForever(autoreverses: true), value: glowPulse)
-                
-                // 3D Cube Faces
-                ZStack {
-                    face(angle: 0)   // Front
-                    face(angle: 90)  // Right
-                    face(angle: 180) // Back
-                    face(angle: 270) // Left
-                }
-                .rotation3DEffect(
-                    .degrees(rotation),
-                    axis: (x: 0, y: 1, z: 0),
-                    anchorZ: -size/2,
-                    perspective: 0.3
-                )
-            }
-            .frame(width: size, height: size)
-            .onAppear {
-                glowPulse = true
-                // Static 45 degree angle (Edge Center) with subtle floating effect
-                rotation = -45
-                withAnimation(.easeInOut(duration: 5).repeatForever(autoreverses: true)) {
-                    rotation = -40 // Vary slightly between -45 and -40 (or -50)
-                }
-            }
-        }
-        
-        @ViewBuilder
-        func face(angle: Double) -> some View {
             Group {
                 if let image = platformImage {
                     Image(platformImage: image)
@@ -199,30 +154,19 @@ struct NowPlayingView: View {
                 } else {
                     // Fallback visual
                     ZStack {
-                        ModernTheme.cardGradient
+                        Color.gray.opacity(0.3)
                         Image(systemName: "music.note")
-                            .font(.system(size: 80))
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(.system(size: size * 0.4))
+                            .foregroundColor(.white.opacity(0.3))
                     }
                 }
             }
             .frame(width: size, height: size)
-            .clipped()
-            .overlay(
-                // Shine/Reflection effect
-                LinearGradient(
-                    colors: [.white.opacity(0.1), .clear, .black.opacity(0.4)], // Enhanced shading for 3D depth
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .border(Color.white.opacity(0.1), width: 0.5)
-            .rotation3DEffect(
-                .degrees(angle),
-                axis: (x: 0, y: 1, z: 0),
-                anchorZ: -size/2,
-                perspective: 0.3
-            )
+            .cornerRadius(16)
+            // Dynamic colored shadow
+            .shadow(color: glowingColor.opacity(0.5), radius: 25, x: 0, y: 12)
+            // Depth shadow
+            .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 6)
         }
     }
     

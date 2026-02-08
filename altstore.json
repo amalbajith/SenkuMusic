@@ -1,0 +1,29 @@
+{
+    "name": "SenkuMusic",
+    "identifier": "org.amal.SenkuPlayer.source",
+    "subtitle": "The best music player for iOS",
+    "iconURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/new-ui/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/logo%201.png",
+    "website": "https://github.com/amalbajith/SenkuMusic",
+    "tintColor": "#FC3C44",
+    "apps": [
+        {
+            "name": "SenkuMusic",
+            "bundleIdentifier": "org.amal.SenkuPlayer",
+            "developerName": "Amal Bajith",
+            "subtitle": "Apple Music Client",
+            "localizedDescription": "A beautiful Apple Music client with dynamic artwork and modern UI.",
+            "iconURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/new-ui/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/logo%201.png",
+            "tintColor": "#FC3C44",
+            "versions": [
+                {
+                    "version": "1.4.0",
+                    "date": "2026-02-08",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.4.0/SenkuMusic.ipa",
+                    "size": 15000000,
+                    "minOSVersion": "15.0",
+                    "localizedDescription": "Initial release with 2D dynamic artwork."
+                }
+            ]
+        }
+    ]
+}
