@@ -14,6 +14,11 @@
             "localizedDescription": "A beautiful Apple Music client with dynamic artwork and modern UI.",
             "iconURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/new-ui/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/logo%201.png",
             "tintColor": "#FC3C44",
+            "appPermissions": {
+                "privacy": {
+                    "NSLocalNetworkUsageDescription": "Aura needs access to the local network to share songs with nearby friends."
+                }
+            },
             "versions": [
                 {
                     "version": "1.4.0",
