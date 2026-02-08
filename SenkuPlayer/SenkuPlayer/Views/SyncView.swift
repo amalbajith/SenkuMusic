@@ -191,6 +191,7 @@ struct SyncView: View {
         multipeer.syncDetails = ""
         multipeer.sentFilesCount = 0
         multipeer.receivedFilesCount = 0
+        multipeer.pendingFilesCount = 0
         multipeer.startSmartSync()
     }
 }

@@ -140,6 +140,49 @@ class MusicLibraryManager: ObservableObject {
             }
         }
     }
+
+    // Batch variant used by sync to avoid repeated save/organize cycles.
+    func addSongsFromURLs(_ urls: [URL]) async {
+        guard !urls.isEmpty else { return }
+
+        var parsedSongs: [(song: Song, artwork: Data?)] = []
+        parsedSongs.reserveCapacity(urls.count)
+        for url in urls {
+            if let parsed = await Song.fromURL(url) {
+                parsedSongs.append((parsed.0, parsed.1))
+            }
+        }
+
+        await MainActor.run {
+            var importedNeedingMetadata: [Song] = []
+
+            for (song, artwork) in parsedSongs {
+                if let artwork = artwork {
+                    ArtworkManager.shared.saveArtwork(artwork, for: song.id)
+                }
+
+                let isDuplicate = self.songs.contains {
+                    $0.title == song.title &&
+                    $0.artist == song.artist &&
+                    $0.album == song.album
+                }
+
+                if !isDuplicate {
+                    self.songs.append(song)
+                    importedNeedingMetadata.append(song)
+                } else if !self.songs.contains(where: { $0.url == song.url }) {
+                    try? self.fileManager.removeItem(at: song.url)
+                }
+            }
+
+            self.organizeLibrary()
+            self.saveSongs()
+
+            Task {
+                await self.autoFetchMetadata(for: importedNeedingMetadata)
+            }
+        }
+    }
     
     // MARK: - Auto Metadata Fetching
     private func autoFetchMetadata(for songs: [Song]) async {
@@ -368,4 +411,3 @@ class MusicLibraryManager: ObservableObject {
         }
     }
 }
-

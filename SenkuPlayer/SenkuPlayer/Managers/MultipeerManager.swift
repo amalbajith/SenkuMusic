@@ -20,6 +20,11 @@ class MultipeerManager: NSObject, ObservableObject {
 
     // Transfer tuning: 2-3 gives better throughput without overwhelming MCSession.
     private let maxConcurrentTransfers = 3
+    private let targetBatchBytes = 24 * 1024 * 1024
+    private let maxSongsPerBatch = 28
+    private let batchFileExtension = "senkubatch"
+    private let batchMagic = "SNKB1"
+    private let batchVersion: UInt16 = 1
 
     private var sendProgressMap: [String: Progress] = [:]
     private var receiveProgressMap: [String: Progress] = [:]
@@ -125,19 +130,23 @@ class MultipeerManager: NSObject, ObservableObject {
         }
     }
 
-    func sendSong(_ url: URL, to peer: MCPeerID) async throws {
+    private func sendResource(_ resourceURL: URL, displayName: String, itemCount: Int, cleanupAfterSend: Bool, to peer: MCPeerID) async throws {
         guard session.connectedPeers.contains(peer) else { return }
 
-        let transferKey = "send-\(peer.displayName)-\(url.lastPathComponent)-\(UUID().uuidString)"
+        let transferKey = "send-\(peer.displayName)-\(resourceURL.lastPathComponent)-\(UUID().uuidString)"
 
         await MainActor.run {
             self.activeTransferCount += 1
-            self.syncDetails = "Sending: \(url.lastPathComponent.replacingOccurrences(of: ".mp3", with: ""))"
+            self.syncDetails = "Sending: \(displayName)"
             self.startProgressMonitoringIfNeeded()
         }
 
         return try await withCheckedThrowingContinuation { continuation in
-            let progress = session.sendResource(at: url, withName: url.lastPathComponent, toPeer: peer) { error in
+            let progress = session.sendResource(at: resourceURL, withName: resourceURL.lastPathComponent, toPeer: peer) { error in
+                if cleanupAfterSend {
+                    try? FileManager.default.removeItem(at: resourceURL)
+                }
+
                 Task { @MainActor in
                     self.activeTransferCount = max(0, self.activeTransferCount - 1)
                     self.pendingFilesCount = max(0, self.pendingFilesCount - 1)
@@ -146,7 +155,7 @@ class MultipeerManager: NSObject, ObservableObject {
                     self.stopProgressMonitoringIfIdle()
 
                     if error == nil {
-                        self.sentFilesCount += 1
+                        self.sentFilesCount += itemCount
                     }
 
                     if self.pendingFilesCount == 0 && !self.isReceiving {
@@ -202,6 +211,24 @@ struct SyncMessage: Codable {
     let items: [SongIdentity]
 }
 
+private enum BatchArchiveError: LocalizedError {
+    case invalidHeader
+    case unsupportedVersion
+    case invalidFilename
+    case invalidFileSize
+    case unexpectedEOF
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidHeader: return "Invalid sync batch header."
+        case .unsupportedVersion: return "Unsupported sync batch version."
+        case .invalidFilename: return "Invalid filename in sync batch."
+        case .invalidFileSize: return "Invalid file size in sync batch."
+        case .unexpectedEOF: return "Sync batch ended unexpectedly."
+        }
+    }
+}
+
 extension MultipeerManager {
     private static func normalizedIdentity(for song: Song) -> SongIdentity {
         SongIdentity(
@@ -223,17 +250,35 @@ extension MultipeerManager {
         }
 
         Task {
+            let songBatches = makeSongBatches(from: songs)
+
             await MainActor.run {
-                self.pendingFilesCount += songs.count
-                self.syncStatus = "Transferring \(songs.count) file\(songs.count == 1 ? "" : "s")..."
+                self.pendingFilesCount += songBatches.count
+                self.syncStatus = "Transferring \(songs.count) tracks in \(songBatches.count) batch\(songBatches.count == 1 ? "" : "es")..."
                 self.syncDetails = "Sending to \(peerID.displayName)"
             }
 
-            for batch in songs.chunked(into: self.maxConcurrentTransfers) {
+            for batch in songBatches.chunked(into: self.maxConcurrentTransfers) {
                 await withTaskGroup(of: Void.self) { group in
-                    for song in batch {
+                    for songsInBatch in batch {
                         group.addTask {
-                            try? await self.sendSong(song.url, to: peerID)
+                            do {
+                                let archiveURL = try self.createBatchArchive(from: songsInBatch)
+                                let label = songsInBatch.first?.title.normalizedForDisplay ?? "Batch"
+                                try await self.sendResource(
+                                    archiveURL,
+                                    displayName: "\(label) +\(max(0, songsInBatch.count - 1))",
+                                    itemCount: songsInBatch.count,
+                                    cleanupAfterSend: true,
+                                    to: peerID
+                                )
+                            } catch {
+                                await MainActor.run {
+                                    self.pendingFilesCount = max(0, self.pendingFilesCount - 1)
+                                    self.syncStatus = "Batch send failed"
+                                    self.syncDetails = error.localizedDescription
+                                }
+                            }
                         }
                     }
                 }
@@ -332,6 +377,175 @@ extension MultipeerManager {
         let totalFraction = active.reduce(0.0) { $0 + $1.fractionCompleted }
         transferProgress = min(max(totalFraction / Double(active.count), 0), 1)
     }
+
+    private func makeSongBatches(from songs: [Song]) -> [[Song]] {
+        var batches: [[Song]] = []
+        var currentBatch: [Song] = []
+        var currentBytes = 0
+
+        for song in songs {
+            let fileBytes = ((try? song.url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            let wouldExceedBytes = currentBytes + fileBytes > targetBatchBytes
+            let wouldExceedCount = currentBatch.count >= maxSongsPerBatch
+
+            if !currentBatch.isEmpty && (wouldExceedBytes || wouldExceedCount) {
+                batches.append(currentBatch)
+                currentBatch = []
+                currentBytes = 0
+            }
+
+            currentBatch.append(song)
+            currentBytes += fileBytes
+        }
+
+        if !currentBatch.isEmpty {
+            batches.append(currentBatch)
+        }
+
+        return batches
+    }
+
+    private func createBatchArchive(from songs: [Song]) throws -> URL {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("senku-sync", isDirectory: true)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let archiveURL = tempDir.appendingPathComponent("batch-\(UUID().uuidString).\(batchFileExtension)")
+
+        FileManager.default.createFile(atPath: archiveURL.path, contents: nil)
+        let outHandle = try FileHandle(forWritingTo: archiveURL)
+        defer { try? outHandle.close() }
+
+        guard let magicData = batchMagic.data(using: .utf8) else { throw BatchArchiveError.invalidHeader }
+        try outHandle.write(contentsOf: magicData)
+        try writeInteger(batchVersion, to: outHandle)
+        try writeInteger(UInt32(songs.count), to: outHandle)
+
+        let ioChunkSize = 256 * 1024
+        for song in songs {
+            let sanitizedName = (song.url.lastPathComponent as NSString).lastPathComponent
+            let nameData = Data(sanitizedName.utf8)
+            if nameData.count > Int(UInt16.max) { throw BatchArchiveError.invalidFilename }
+
+            let fileSize = Int64((try song.url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            if fileSize < 0 { throw BatchArchiveError.invalidFileSize }
+
+            try writeInteger(UInt16(nameData.count), to: outHandle)
+            try outHandle.write(contentsOf: nameData)
+            try writeInteger(UInt64(fileSize), to: outHandle)
+
+            do {
+                let inHandle = try FileHandle(forReadingFrom: song.url)
+                defer { try? inHandle.close() }
+
+                while true {
+                    let data = try inHandle.read(upToCount: ioChunkSize) ?? Data()
+                    if data.isEmpty { break }
+                    try outHandle.write(contentsOf: data)
+                }
+            }
+        }
+
+        return archiveURL
+    }
+
+    private func unpackBatchArchive(from archiveURL: URL, into musicDirectory: URL) throws -> [URL] {
+        let inHandle = try FileHandle(forReadingFrom: archiveURL)
+        defer { try? inHandle.close() }
+
+        let expectedMagicLength = batchMagic.utf8.count
+        let magicData = try readExactBytes(expectedMagicLength, from: inHandle)
+        guard String(data: magicData, encoding: .utf8) == batchMagic else {
+            throw BatchArchiveError.invalidHeader
+        }
+
+        let version: UInt16 = try readInteger(from: inHandle)
+        guard version == batchVersion else {
+            throw BatchArchiveError.unsupportedVersion
+        }
+
+        let fileCount: UInt32 = try readInteger(from: inHandle)
+        var extracted: [URL] = []
+        extracted.reserveCapacity(Int(fileCount))
+
+        let ioChunkSize = 256 * 1024
+        for _ in 0..<fileCount {
+            let nameLength: UInt16 = try readInteger(from: inHandle)
+            let nameData = try readExactBytes(Int(nameLength), from: inHandle)
+            guard let rawName = String(data: nameData, encoding: .utf8), !rawName.isEmpty else {
+                throw BatchArchiveError.invalidFilename
+            }
+
+            let sanitizedName = (rawName as NSString).lastPathComponent
+            let destinationURL = uniqueDestinationURL(for: sanitizedName, in: musicDirectory)
+            let byteCount: UInt64 = try readInteger(from: inHandle)
+
+            FileManager.default.createFile(atPath: destinationURL.path, contents: nil)
+            do {
+                let outHandle = try FileHandle(forWritingTo: destinationURL)
+                defer { try? outHandle.close() }
+
+                var remaining = byteCount
+                while remaining > 0 {
+                    let readCount = Int(min(UInt64(ioChunkSize), remaining))
+                    let chunk = try readExactBytes(readCount, from: inHandle)
+                    try outHandle.write(contentsOf: chunk)
+                    remaining -= UInt64(chunk.count)
+                }
+            }
+
+            extracted.append(destinationURL)
+        }
+
+        return extracted
+    }
+
+    private func uniqueDestinationURL(for filename: String, in directory: URL) -> URL {
+        var candidate = directory.appendingPathComponent(filename)
+        if !FileManager.default.fileExists(atPath: candidate.path) {
+            return candidate
+        }
+
+        let name = (filename as NSString).deletingPathExtension
+        let ext = (filename as NSString).pathExtension
+        var counter = 1
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            let suffix = ext.isEmpty ? "\(name) \(counter)" : "\(name) \(counter).\(ext)"
+            candidate = directory.appendingPathComponent(suffix)
+            counter += 1
+        }
+        return candidate
+    }
+
+    private func readExactBytes(_ count: Int, from handle: FileHandle) throws -> Data {
+        var data = Data()
+        data.reserveCapacity(count)
+
+        while data.count < count {
+            let needed = count - data.count
+            let chunk = try handle.read(upToCount: needed) ?? Data()
+            if chunk.isEmpty { throw BatchArchiveError.unexpectedEOF }
+            data.append(chunk)
+        }
+        return data
+    }
+
+    private func writeInteger<T: FixedWidthInteger>(_ value: T, to handle: FileHandle) throws {
+        var littleEndian = value.littleEndian
+        var data = Data(capacity: MemoryLayout<T>.size)
+        for _ in 0..<MemoryLayout<T>.size {
+            data.append(UInt8(truncatingIfNeeded: littleEndian))
+            littleEndian >>= 8
+        }
+        try handle.write(contentsOf: data)
+    }
+
+    private func readInteger<T: FixedWidthInteger>(from handle: FileHandle) throws -> T {
+        let data = try readExactBytes(MemoryLayout<T>.size, from: handle)
+        var result: T = 0
+        for (shift, byte) in data.enumerated() {
+            result |= T(byte) << T(shift * 8)
+        }
+        return result
+    }
 }
 
 // MARK: - MCSessionDelegate
@@ -372,7 +586,7 @@ extension MultipeerManager: MCSessionDelegate {
         DispatchQueue.main.async {
             self.isReceiving = true
             self.syncStatus = "Receiving files..."
-            self.syncDetails = "Receiving: \(resourceName)"
+            self.syncDetails = resourceName.hasSuffix(".\(self.batchFileExtension)") ? "Receiving sync batch..." : "Receiving: \(resourceName)"
 
             let key = "recv-\(peerID.displayName)-\(resourceName)"
             self.receiveProgressMap[key] = progress
@@ -407,44 +621,61 @@ extension MultipeerManager: MCSessionDelegate {
                 return
             }
 
-            do {
-                let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                let musicDirectory = documentsPath.appendingPathComponent("Music", isDirectory: true)
+            let isBatch = resourceName.hasSuffix(".\(self.batchFileExtension)")
+            DispatchQueue.global(qos: .utility).async {
+                do {
+                    let musicDirectory = MusicLibraryManager.shared.getMusicDirectory()
+                    var importedURLs: [URL] = []
 
-                if !FileManager.default.fileExists(atPath: musicDirectory.path) {
-                    try FileManager.default.createDirectory(at: musicDirectory, withIntermediateDirectories: true)
+                    if isBatch {
+                        importedURLs = try self.unpackBatchArchive(from: localURL, into: musicDirectory)
+                        try? FileManager.default.removeItem(at: localURL)
+                    } else {
+                        let sanitizedName = (resourceName as NSString).lastPathComponent
+                        var destinationURL = musicDirectory.appendingPathComponent(sanitizedName)
+                        if FileManager.default.fileExists(atPath: destinationURL.path) {
+                            let baseName = (sanitizedName as NSString).deletingPathExtension
+                            let ext = (sanitizedName as NSString).pathExtension
+                            var counter = 1
+                            while FileManager.default.fileExists(atPath: destinationURL.path) {
+                                let suffix = ext.isEmpty ? "\(baseName) \(counter)" : "\(baseName) \(counter).\(ext)"
+                                destinationURL = musicDirectory.appendingPathComponent(suffix)
+                                counter += 1
+                            }
+                        }
+                        try FileManager.default.moveItem(at: localURL, to: destinationURL)
+                        importedURLs = [destinationURL]
+                    }
+
+                    DispatchQueue.main.async {
+                        if let first = importedURLs.first {
+                            self.receivedSongURL = first
+                            self.lastReceivedSongName = first.deletingPathExtension().lastPathComponent
+                            self.showReceivedNotification = true
+                        }
+                        self.receivedFilesCount += importedURLs.count
+                        self.syncDetails = isBatch ? "Received batch: \(importedURLs.count) tracks" : "Received: \(resourceName)"
+                    }
+
+                    Task {
+                        await MusicLibraryManager.shared.addSongsFromURLs(importedURLs)
+                    }
+
+                    DispatchQueue.main.async {
+                        if self.pendingFilesCount == 0 && !self.isSending && !self.isReceiving {
+                            self.syncStatus = "Sync complete"
+                            self.syncDetails = "Sent \(self.sentFilesCount), received \(self.receivedFilesCount)"
+                        }
+                        self.stopProgressMonitoringIfIdle()
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self.syncStatus = "Import failed"
+                        self.syncDetails = error.localizedDescription
+                        self.stopProgressMonitoringIfIdle()
+                    }
                 }
-
-                // Path traversal protection.
-                let sanitizedName = (resourceName as NSString).lastPathComponent
-                let destinationURL = musicDirectory.appendingPathComponent(sanitizedName)
-
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    try FileManager.default.removeItem(at: destinationURL)
-                }
-
-                try FileManager.default.moveItem(at: localURL, to: destinationURL)
-
-                self.receivedSongURL = destinationURL
-                self.lastReceivedSongName = sanitizedName.replacingOccurrences(of: ".mp3", with: "", options: .caseInsensitive)
-                self.showReceivedNotification = true
-                self.receivedFilesCount += 1
-
-                Task {
-                    await MusicLibraryManager.shared.addSongFromURL(destinationURL)
-                }
-
-                if self.pendingFilesCount == 0 && !self.isSending && !self.isReceiving {
-                    self.syncStatus = "Sync complete"
-                    self.syncDetails = "Sent \(self.sentFilesCount), received \(self.receivedFilesCount)"
-                }
-
-            } catch {
-                self.syncStatus = "Import failed"
-                self.syncDetails = error.localizedDescription
             }
-
-            self.stopProgressMonitoringIfIdle()
         }
     }
 }
