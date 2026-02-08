@@ -174,18 +174,21 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
     
     func playNext(song: Song) {
+        // Consolidate with the other implementation
+        playNextTrack(song)
+    }
+    
+    private func playNextTrack(_ song: Song) {
         if queue.isEmpty {
-            play(song: song, in: [song])
+            playSong(song, in: [song], at: 0)
             return
         }
         
         // Remove if already in queue to avoid duplicates
         queue.removeAll { $0.id == song.id }
-        originalQueue.removeAll { $0.id == song.id }
         
         let insertIndex = Swift.min(currentIndex + 1, queue.count)
         queue.insert(song, at: insertIndex)
-        originalQueue.append(song) // Keep original queue updated
         
         print("⏭️ Scheduled next: \(song.title)")
     }
@@ -372,13 +375,19 @@ class AudioPlayerManager: NSObject, ObservableObject {
 
     // MARK: - Normal Playback Handlers
     private func handlePlaybackFinished() {
-        DispatchQueue.main.async {
-             if !self.isCrossfading {
-                 // Check if actually near end (Safety Guard)
-                 if self.duration - self.currentTime < 2.0 {
-                     self.playNext()
-                 }
-             }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, !self.isCrossfading else { return }
+            
+            // Check if actually near end (Safety Guard)
+            if self.duration - self.currentTime < 2.5 {
+                if let nextIndex = self.getNextIndex() {
+                    self.currentIndex = nextIndex
+                    self.startPlayback(with: self.queue[nextIndex])
+                } else {
+                    self.isPlaying = false
+                    print("🏁 Queue finished")
+                }
+            }
         }
     }
     
@@ -415,36 +424,15 @@ class AudioPlayerManager: NSObject, ObservableObject {
             return
         }
         
-        // Manual skip logic:
-        // 1. Always advance, ignoring Repeat One
-        // 2. Wrap if Repeat All
-        // 3. Stop if Repeat Off and at end (or wrap if you prefer loose behavior, but strict is safer)
+        guard !queue.isEmpty else { return }
         
-        let nextIndex = currentIndex + 1
-        
-        if nextIndex < queue.count {
-            currentIndex = nextIndex
-            startPlayback(with: queue[currentIndex])
-        } else if repeatMode == .all {
-            currentIndex = 0
-            startPlayback(with: queue[0])
-        } else {
-            // End of queue and no repeat - do nothing or stop
-            print("End of queue reached")
-        }
+        // Manual skip logic: Always advance and wrap around for consistent UX
+        currentIndex = (currentIndex + 1) % queue.count
+        startPlayback(with: queue[currentIndex])
     }
     
     func playNext(_ song: Song) {
-        if queue.isEmpty {
-            playSong(song, in: [song], at: 0)
-        } else {
-            let insertIndex = currentIndex + 1
-            if insertIndex <= queue.count {
-                queue.insert(song, at: insertIndex)
-            } else {
-                queue.append(song)
-            }
-        }
+        playNextTrack(song)
     }
     
     func playLater(_ song: Song) {
@@ -456,6 +444,8 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
     
     func playPrevious() {
+        guard !queue.isEmpty else { return }
+        
         if currentTime > 3 {
              seek(to: 0)
         } else {
