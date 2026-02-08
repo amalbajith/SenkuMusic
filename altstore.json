@@ -31,7 +31,7 @@
                     "version": "1.7.0",
                     "date": "2026-02-08",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.7.0/SenkuMusic.ipa",
-                    "size": 2484795,
+                    "size": 2486046,
                     "minOSVersion": "15.0",
                     "localizedDescription": "SMART SYNC UPDATE:\n- 🔄 SMART CATALOG DIFFING: Only transfers missing songs between devices.\n- ⚡️ CONCURRENT TRANSFERS: Faster sync using multiple parallel streams.\n- 📊 NEW SYNC DASHBOARD: Real-time progress bars and transfer statistics.\n- 🧪 STABILITY: Improved connection handling and auto-reconnect logic."
                 },
