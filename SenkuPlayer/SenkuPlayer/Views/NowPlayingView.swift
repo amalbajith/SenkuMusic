@@ -126,7 +126,7 @@ struct NowPlayingView: View {
             #else
             let screenWidth = NSScreen.main?.frame.width ?? 800
             #endif
-            let size = min(screenWidth - 80, 350)
+            let size = min(screenWidth - 100, 300)
             
             if let song = player.currentSong,
                let artworkData = song.artworkData,
