@@ -10,6 +10,9 @@ DerivedData/
 # Build artifacts
 ExportedIPA/
 ExportOptions.plist
+Payload/
+*.log
+.agent/
 
 # macOS
 .DS_Store

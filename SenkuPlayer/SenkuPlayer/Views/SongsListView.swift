@@ -127,7 +127,7 @@ struct SongsListView: View {
         HStack {
             Text("\(selectedSongs.count) selected")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(ModernTheme.textSecondary)
             
             Spacer()
             
@@ -139,7 +139,10 @@ struct SongsListView: View {
             .disabled(selectedSongs.isEmpty)
         }
         .padding()
-        .background(Color.gray.opacity(0.12))
+        .background(ModernTheme.backgroundSecondary)
+        .overlay(alignment: .top) {
+            Divider().background(ModernTheme.borderSubtle)
+        }
         #if os(iOS)
         .padding(.bottom, player.currentSong != nil ? 80 : 0)
         #endif
@@ -205,7 +208,7 @@ struct SimpleSongRow: View {
                 
                 Text(song.artist.normalizedForDisplay)
                     .font(ModernTheme.caption())
-                    .foregroundColor(ModernTheme.lightGray)
+                    .foregroundColor(ModernTheme.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -221,7 +224,7 @@ struct SimpleSongRow: View {
             } else if !isSelectionMode {
                 Text(formatDuration(song.duration))
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ModernTheme.textTertiary)
             }
         }
         .padding(.vertical, 8)

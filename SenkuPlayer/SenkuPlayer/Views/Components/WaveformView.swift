@@ -54,16 +54,14 @@ struct WaveformView: View {
         let normalizedIndex = Double(index) / Double(barCount)
         
         if normalizedIndex <= progress {
-            // Played portion - yellow gradient
             return LinearGradient(
-                colors: [ModernTheme.accentYellow, ModernTheme.accentYellow.opacity(0.7)],
+                colors: [ModernTheme.accentYellowSoft, ModernTheme.accentYellow],
                 startPoint: .top,
                 endPoint: .bottom
             )
         } else {
-            // Unplayed portion - gray
             return LinearGradient(
-                colors: [ModernTheme.lightGray.opacity(0.4), ModernTheme.lightGray.opacity(0.2)],
+                colors: [ModernTheme.textTertiary.opacity(0.45), ModernTheme.textTertiary.opacity(0.2)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -98,6 +96,7 @@ struct WaveformView: View {
     }
     
     private func startAnimation() {
+        stopAnimation()
         animationTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { _ in
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 updateAmplitudes()

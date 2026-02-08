@@ -13,48 +13,43 @@ import UIKit
 #endif
 
 struct ModernTheme {
-    // MARK: - Colors (Cyberpunk Acid Palette)
+    // MARK: - Colors (Refined Neon Graphite Palette)
     
-    /// Primary accent color - Acid Yellow
-    static let accentYellow = Color(hex: "#CCFF00")
+    /// Primary accent color - Electric Lime
+    static let accentYellow = Color(hex: "#C6F806")
+    static let accentYellowSoft = Color(hex: "#E2FF70")
+    static let accentYellowMuted = Color(hex: "#7A962A")
     
-    /// Pure black for deep background
     static let pureBlack = Color(hex: "#000000")
-    
-    /// Primary background - Void Black
-    static let backgroundPrimary = Color(hex: "#000000")
-    
-    /// Secondary background - Deep Carbon (for lists/surfaces)
-    static let backgroundSecondary = Color(hex: "#0A0A0A")
-    
-    /// Card background - Matte Black
-    static let darkGray = Color(hex: "#111111")
-    
-    /// Medium gray for secondary elements/borders
-    static let mediumGray = Color(hex: "#1A1A1A")
-    
-    /// Light gray for secondary text
-    static let lightGray = Color(hex: "#9E9E9E")
-    
-    /// Subtle border color
+    static let backgroundPrimary = Color(hex: "#070909")
+    static let backgroundSecondary = Color(hex: "#101414")
+    static let darkGray = Color(hex: "#151A1A")
+    static let mediumGray = Color(hex: "#212828")
+    static let lightGray = Color(hex: "#A8B3AF")
+    static let textPrimary = Color(hex: "#F2F4F3")
+    static let textSecondary = Color(hex: "#A8B3AF")
+    static let textTertiary = Color(hex: "#6F7A76")
+    static let success = Color(hex: "#42D58A")
+    static let danger = Color(hex: "#FF5D6E")
     static let borderSubtle = Color.white.opacity(0.15)
+    static let borderStrong = accentYellow.opacity(0.35)
     
     // MARK: - Gradients
     
     static let cardGradient = LinearGradient(
-        colors: [Color(hex: "#111111"), Color(hex: "#1A1A1A")],
+        colors: [Color(hex: "#121818"), Color(hex: "#1D2424")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
     static let accentGradient = LinearGradient(
-        colors: [Color(hex: "#CCFF00"), Color(hex: "#E0FF4F")], // Acid Yellow to Bright Lime
+        colors: [accentYellow, accentYellowSoft],
         startPoint: .leading,
         endPoint: .trailing
     )
     
     static let backgroundGradient = LinearGradient(
-        colors: [Color(hex: "#000000"), Color(hex: "#0A0A0A")],
+        colors: [backgroundPrimary, Color(hex: "#0D1111")],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -162,7 +157,7 @@ struct SectionHeaderModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(ModernTheme.headline())
-            .foregroundColor(.white)
+            .foregroundColor(ModernTheme.textPrimary)
             .padding(.horizontal, 24)
     }
 }
@@ -170,7 +165,7 @@ struct SectionHeaderModifier: ViewModifier {
 struct CardBackgroundModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(ModernTheme.backgroundSecondary)
+            .background(ModernTheme.cardGradient)
             .cornerRadius(ModernTheme.cardRadius)
             .overlay(
                 RoundedRectangle(cornerRadius: ModernTheme.cardRadius)

@@ -15,30 +15,31 @@ import UIKit
 struct NowPlayingView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var isDraggingSlider = false
-    @State private var draggedTime: TimeInterval = 0
     @StateObject private var favoritesManager = FavoritesManager.shared
     @State private var backgroundColor: Color = ModernTheme.pureBlack
     
     // Developer Settings
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
-    @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
-
 
     var body: some View {
         ZStack {
-            // Solid Black Background for BW Theme
-            // Dynamic Background Gradient
             LinearGradient(
-                colors: [backgroundColor, ModernTheme.pureBlack],
+                colors: [backgroundColor.opacity(0.85), ModernTheme.backgroundPrimary],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             .animation(.linear(duration: 0.5), value: backgroundColor)
+            .overlay {
+                LinearGradient(
+                    colors: [ModernTheme.pureBlack.opacity(0.15), ModernTheme.pureBlack.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            }
             
             VStack(spacing: 0) {
-                // Header with back button
                 header
                     .padding(.top, 8)
                 
@@ -52,11 +53,9 @@ struct NowPlayingView: View {
                 Spacer()
                     .frame(minHeight: 20, maxHeight: 30)
                 
-                // Song Info
                 songInfo
                     .padding(.horizontal, 32)
                 
-                // Waveform Visualization
                 WaveformView(
                     isPlaying: player.isPlaying,
                     progress: player.currentTime / max(player.duration, 1),
@@ -68,7 +67,6 @@ struct NowPlayingView: View {
                 Spacer()
                     .frame(minHeight: 20, maxHeight: 30)
                 
-                // Playback Controls
                 playbackControls
                     .padding(.horizontal, 40)
                     .padding(.bottom, 40)
@@ -76,7 +74,7 @@ struct NowPlayingView: View {
             .frame(maxWidth: .infinity)
         }
         .preferredColorScheme(.dark)
-        .onChange(of: player.currentSong) { oldValue, newValue in
+        .onChange(of: player.currentSong) { _, _ in
             updateBackgroundColor()
         }
         .onAppear {
@@ -92,8 +90,12 @@ struct NowPlayingView: View {
             } label: {
                 Image(systemName: "chevron.down")
                     .font(.title3)
-                    .foregroundColor(.white)
+                    .foregroundColor(ModernTheme.textPrimary)
                     .frame(width: 44, height: 44)
+                    .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
+                    .overlay {
+                        Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                    }
                     .contentShape(Rectangle())
             }
             
@@ -102,7 +104,7 @@ struct NowPlayingView: View {
             Text("NOW PLAYING")
                 .font(.system(size: 12, weight: .black))
                 .kerning(4)
-                .foregroundColor(ModernTheme.lightGray)
+                .foregroundColor(ModernTheme.textSecondary)
             
             Spacer()
             
@@ -163,6 +165,10 @@ struct NowPlayingView: View {
             }
             .frame(width: size, height: size)
             .cornerRadius(16)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(ModernTheme.borderSubtle, lineWidth: 1)
+            }
             // Dynamic colored shadow
             .shadow(color: glowingColor.opacity(0.5), radius: 25, x: 0, y: 12)
             // Depth shadow
@@ -175,15 +181,17 @@ struct NowPlayingView: View {
         VStack(alignment: .center, spacing: 8) {
             Text((player.currentSong?.title ?? "Not Playing").normalizedForDisplay)
                 .font(ModernTheme.title())
-                .foregroundColor(.white)
+                .foregroundColor(ModernTheme.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             
             Text((player.currentSong?.artist ?? "Unknown Artist").normalizedForDisplay)
                 .font(ModernTheme.body())
-                .foregroundColor(ModernTheme.lightGray)
+                .foregroundColor(ModernTheme.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+
+            albumMetadata
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
@@ -194,10 +202,10 @@ struct NowPlayingView: View {
             if let album = player.currentSong?.album, !album.isEmpty {
                 Text(album)
                     .font(ModernTheme.caption())
-                    .foregroundColor(ModernTheme.lightGray)
+                    .foregroundColor(ModernTheme.textTertiary)
                 
                 Text("•")
-                    .foregroundColor(ModernTheme.lightGray)
+                    .foregroundColor(ModernTheme.textTertiary)
             }
         }
     }
@@ -213,8 +221,12 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "backward.fill")
                         .font(.title)
-                        .foregroundColor(.white)
+                        .foregroundColor(ModernTheme.textPrimary)
                         .frame(width: 60, height: 60)
+                        .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
+                        .overlay {
+                            Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                        }
                         .contentShape(Rectangle())
                 }
                 
@@ -224,7 +236,8 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 80))
-                        .foregroundColor(.white)
+                        .foregroundStyle(ModernTheme.accentGradient)
+                        .shadow(color: ModernTheme.accentYellow.opacity(0.35), radius: 18, x: 0, y: 8)
                         .contentShape(Circle())
                 }
                 
@@ -234,8 +247,12 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title)
-                        .foregroundColor(.white)
+                        .foregroundColor(ModernTheme.textPrimary)
                         .frame(width: 60, height: 60)
+                        .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
+                        .overlay {
+                            Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                        }
                         .contentShape(Rectangle())
                 }
             }
@@ -248,8 +265,9 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: player.isShuffled ? "shuffle.circle.fill" : "shuffle")
                         .font(.title2)
-                        .foregroundColor(player.isShuffled ? ModernTheme.accentYellow : ModernTheme.lightGray)
+                        .foregroundColor(player.isShuffled ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                         .frame(width: 50, height: 50)
+                        .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
                 
                 // Heart (Favorite)
@@ -259,8 +277,9 @@ struct NowPlayingView: View {
                     } label: {
                         Image(systemName: favoritesManager.isFavorite(song: song) ? "heart.fill" : "heart")
                             .font(.title2)
-                            .foregroundColor(favoritesManager.isFavorite(song: song) ? ModernTheme.accentYellow : ModernTheme.lightGray)
+                            .foregroundColor(favoritesManager.isFavorite(song: song) ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                             .frame(width: 50, height: 50)
+                            .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                             .symbolEffect(.bounce, value: favoritesManager.isFavorite(song: song))
                     }
                 }
@@ -280,18 +299,12 @@ struct NowPlayingView: View {
                         }
                     }
                     .font(.title2)
-                    .foregroundColor(player.repeatMode != .off ? ModernTheme.accentYellow : ModernTheme.lightGray)
+                    .foregroundColor(player.repeatMode != .off ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                     .frame(width: 50, height: 50)
+                    .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
             }
         }
-    }
-    
-    // MARK: - Helpers
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
     }
     
     private func updateBackgroundColor() {
@@ -304,7 +317,9 @@ struct NowPlayingView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             let color = DominantColorExtractor.shared.extractDominantColor(for: song)
             DispatchQueue.main.async {
-                self.backgroundColor = color
+                withAnimation(.easeInOut(duration: 0.45)) {
+                    self.backgroundColor = color
+                }
             }
         }
     }

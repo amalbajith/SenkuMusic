@@ -11,7 +11,6 @@ import UniformTypeIdentifiers
 struct ContentView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @StateObject private var multipeer = MultipeerManager.shared
-    @AppStorage("darkMode") private var darkMode = true
     
     @State private var selectedTab = 0
     @State private var columnVisibility = NavigationSplitViewVisibility.all
@@ -202,10 +201,13 @@ struct CustomNavbar: View {
         .padding(.top, 12)
         .padding(.bottom, 24)
         .background(
-            Color.black.opacity(0.8)
+            ModernTheme.backgroundSecondary.opacity(0.85)
                 .background(.ultraThinMaterial)
                 .ignoresSafeArea()
         )
+        .overlay(alignment: .top) {
+            Divider().background(ModernTheme.borderSubtle)
+        }
     }
     
     private func tabItem(index: Int, icon: String, label: String) -> some View {
@@ -218,16 +220,13 @@ struct CustomNavbar: View {
             #endif
         } label: {
             VStack(spacing: 6) {
-                let noFillIcons = ["music.note.list", "arrow.triangle.2.circlepath"]
-                let iconName = (selectedTab == index && !noFillIcons.contains(icon)) ? "\(icon)" : icon // Sync icon usually has no fill variant or behaves differently, keeping simple
-                
-                Image(systemName: iconName)
+                Image(systemName: icon)
                     .font(.system(size: 22))
                 
                 Text(label)
                     .font(.system(size: 10, weight: .bold))
             }
-            .foregroundColor(selectedTab == index ? ModernTheme.accentYellow : Color.white.opacity(0.4))
+            .foregroundColor(selectedTab == index ? ModernTheme.accentYellow : ModernTheme.textTertiary)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }

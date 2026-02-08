@@ -24,11 +24,11 @@ struct SyncView: View {
                     VStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(isSyncing ? ModernTheme.accentYellow.opacity(0.1) : Color.white.opacity(0.05))
+                                .fill(isSyncing ? ModernTheme.accentYellow.opacity(0.1) : ModernTheme.backgroundSecondary)
                                 .frame(width: 160, height: 160)
                             
                             Circle()
-                                .stroke(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : Color.gray.opacity(0.3), lineWidth: 2)
+                                .stroke(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : ModernTheme.borderSubtle, lineWidth: 2)
                                 .frame(width: 160, height: 160)
                                 .overlay(
                                     Circle()
@@ -41,7 +41,7 @@ struct SyncView: View {
                             
                             Image(systemName: multipeer.isReceiving ? "arrow.down.circle" : (multipeer.isSending ? "arrow.up.circle" : "arrow.triangle.2.circlepath"))
                                 .font(.system(size: 60))
-                                .foregroundColor(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : .gray)
+                                .foregroundColor(isSyncing || multipeer.isReceiving || multipeer.isSending ? ModernTheme.accentYellow : ModernTheme.textTertiary)
                         }
                         .padding(.top, 40)
                         
@@ -52,7 +52,7 @@ struct SyncView: View {
                         
                         Text("Connect to a nearby device to sync your library.")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ModernTheme.textSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
@@ -62,7 +62,7 @@ struct SyncView: View {
                         Text("NEARBY DEVICES")
                             .font(.caption)
                             .fontWeight(.bold)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ModernTheme.textTertiary)
                             .padding(.leading, 8)
                         
                         if multipeer.availablePeers.isEmpty {
@@ -70,7 +70,7 @@ struct SyncView: View {
                                 Spacer()
                                 Text("Searching for devices...")
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ModernTheme.textSecondary)
                                     .italic()
                                 Spacer()
                             }
@@ -93,13 +93,13 @@ struct SyncView: View {
                                                 .foregroundColor(.white)
                                             Text("Ready to connect")
                                                 .font(.caption)
-                                                .foregroundColor(.green)
+                                                .foregroundColor(ModernTheme.success)
                                         }
                                         
                                         Spacer()
                                         
                                         Image(systemName: "chevron.right")
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(ModernTheme.textTertiary)
                                     }
                                     .padding()
                                     .background(ModernTheme.backgroundSecondary)
@@ -127,7 +127,7 @@ struct SyncView: View {
                                     Spacer()
                                     Text("Transferring Library...")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ModernTheme.textSecondary)
                                 }
                             }
                             .padding(.horizontal, 40)
@@ -142,7 +142,11 @@ struct SyncView: View {
                                 .foregroundColor(.black)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(isSyncing ? Color.gray : ModernTheme.accentYellow)
+                                .background(
+                                    isSyncing 
+                                    ? LinearGradient(colors: [ModernTheme.mediumGray, ModernTheme.mediumGray], startPoint: .top, endPoint: .bottom)
+                                    : ModernTheme.accentGradient
+                                )
                                 .cornerRadius(16)
                         }
                         .disabled(multipeer.connectedPeers.isEmpty && !isSyncing) // Only disabled if NOT connected and NOT syncing.
@@ -169,7 +173,7 @@ struct SyncView: View {
     }
     
     private func startSync() {
-        guard let peer = multipeer.connectedPeers.first else {
+        guard !multipeer.connectedPeers.isEmpty else {
             syncStatus = "No device connected"
             return
         }

@@ -140,7 +140,7 @@ struct FavoritesRow: View {
                 
                 Text("\(songs.count) song\(songs.count != 1 ? "s" : "")")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ModernTheme.textSecondary)
             }
             
             Spacer()
@@ -190,7 +190,7 @@ struct FavoritesDetailView: View {
                 
                 Text("\(songs.count) song\(songs.count != 1 ? "s" : "")")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(ModernTheme.textSecondary)
                 
                 if !songs.isEmpty {
                     Button {
@@ -203,7 +203,7 @@ struct FavoritesDetailView: View {
                              .foregroundColor(ModernTheme.pureBlack)
                              .frame(maxWidth: .infinity)
                              .padding()
-                             .background(Color.white)
+                             .background(ModernTheme.accentGradient)
                              .cornerRadius(12)
                     }
                     .padding(.horizontal)
@@ -215,7 +215,7 @@ struct FavoritesDetailView: View {
                  VStack(spacing: 16) {
                      Image(systemName: "heart.slash")
                          .font(.system(size: 50))
-                         .foregroundColor(.gray)
+                         .foregroundColor(ModernTheme.textTertiary)
                      
                      Text("No Favorites Yet")
                          .font(.title3)
@@ -223,7 +223,7 @@ struct FavoritesDetailView: View {
                      
                      Text("Tap the heart icon on the player to add songs")
                          .font(.subheadline)
-                         .foregroundColor(.secondary)
+                         .foregroundColor(ModernTheme.textSecondary)
                          .multilineTextAlignment(.center)
                  }
                  .frame(maxHeight: .infinity)

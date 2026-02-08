@@ -18,6 +18,15 @@ class MetadataFetcher: ObservableObject {
     
     private let musicBrainzBaseURL = "https://musicbrainz.org/ws/2"
     private let coverArtBaseURL = "https://coverartarchive.org"
+    private let maxArtworkBytes = 8 * 1024 * 1024
+    private let allowedHosts: Set<String> = ["musicbrainz.org", "coverartarchive.org"]
+    private lazy var session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 30
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
+    }()
     
     private init() {}
     
@@ -85,23 +94,28 @@ class MetadataFetcher: ObservableObject {
     // MARK: - Private Methods
     
     private func searchRecording(title: String, artist: String) async -> RecordingInfo? {
-        // Clean up search query
-        let cleanTitle = title.replacingOccurrences(of: " ", with: "+")
-        let cleanArtist = artist.replacingOccurrences(of: " ", with: "+")
-        
-        let query = "recording:\(cleanTitle)+AND+artist:\(cleanArtist)"
-        let urlString = "\(musicBrainzBaseURL)/recording/?query=\(query)&fmt=json&limit=1"
-        
-        guard let url = URL(string: urlString) else { return nil }
+        guard var components = URLComponents(string: "\(musicBrainzBaseURL)/recording/") else { return nil }
+        let query = "recording:\(title) AND artist:\(artist)"
+        components.queryItems = [
+            URLQueryItem(name: "query", value: query),
+            URLQueryItem(name: "fmt", value: "json"),
+            URLQueryItem(name: "limit", value: "1")
+        ]
+
+        guard let url = components.url, isAllowedHTTPSURL(url) else { return nil }
         
         var request = URLRequest(url: url)
         request.setValue("SenkuPlayer/1.0 (contact@example.com)", forHTTPHeaderField: "User-Agent")
         
         do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            let response = try JSONDecoder().decode(MusicBrainzRecordingResponse.self, from: data)
+            let (data, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                return nil
+            }
+            let decodedResponse = try JSONDecoder().decode(MusicBrainzRecordingResponse.self, from: data)
             
-            guard let recording = response.recordings.first else { return nil }
+            guard let recording = decodedResponse.recordings.first else { return nil }
             
             // Extract release ID if available
             let releaseId = recording.releases?.first?.id
@@ -127,14 +141,17 @@ class MetadataFetcher: ObservableObject {
     }
     
     private func fetchArtwork(releaseId: String) async -> Data? {
-        let urlString = "\(coverArtBaseURL)/release/\(releaseId)/front-500"
+        let encodedReleaseID = releaseId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? releaseId
+        let urlString = "\(coverArtBaseURL)/release/\(encodedReleaseID)/front-500"
         guard let url = URL(string: urlString) else { return nil }
+        guard isAllowedHTTPSURL(url) else { return nil }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await session.data(from: url)
             
             guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
+                  httpResponse.statusCode == 200,
+                  data.count <= maxArtworkBytes else {
                 return nil
             }
             
@@ -143,6 +160,13 @@ class MetadataFetcher: ObservableObject {
             print("❌ Artwork fetch failed: \(error)")
             return nil
         }
+    }
+
+    private func isAllowedHTTPSURL(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https", let host = url.host?.lowercased() else {
+            return false
+        }
+        return allowedHosts.contains(host)
     }
 }
 

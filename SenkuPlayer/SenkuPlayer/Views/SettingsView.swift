@@ -16,7 +16,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var showingClearLibraryAlert = false
-    @AppStorage("darkMode") private var darkMode = false
     @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
     @AppStorage("gaplessPlayback") private var gaplessPlayback: Bool = true
 
@@ -31,12 +30,13 @@ struct SettingsView: View {
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
 
-    @State private var showPasswordPrompt = false
-    @State private var passwordInput = ""
-    
-    // Dev mode password - change this to whatever you want
-    private let devPassword = "senku2025"
-    
+    private var canUnlockDeveloperSection: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
     
     var body: some View {
         NavigationStack {
@@ -84,21 +84,8 @@ struct SettingsView: View {
         } message: {
             Text("This will remove all songs from your library. This action cannot be undone.")
         }
-        .alert("Developer Access", isPresented: $showPasswordPrompt) {
-            SecureField("Enter Password", text: $passwordInput)
-                .autocorrectionDisabled()
-            Button("Unlock") {
-                verifyPassword()
-            }
-            Button("Cancel", role: .cancel) {
-                passwordInput = ""
-            }
-        } message: {
-            Text("Enter the developer password to unlock advanced features.")
-        }
         .background(ModernTheme.backgroundPrimary)
-        .preferredColorScheme(darkMode ? .dark : .light)
-        .animation(.easeInOut(duration: 0.8), value: darkMode)
+        .preferredColorScheme(.dark)
     }
     
     // MARK: - View Sections
@@ -220,7 +207,7 @@ struct SettingsView: View {
                 SettingsInfoRow(title: "Developer", value: "Amal B Ajith")
                 
                 Button {
-                    if let url = URL(string: "https://github.com/iamalbajith") {
+                    if let url = URL(string: "https://github.com/iamalbajith"), isSafeExternalURL(url) {
                         openURL(url)
                     }
                 } label: {
@@ -310,8 +297,10 @@ struct SettingsView: View {
         #endif
         
         // Show password prompt after 7 taps
-        if versionTapCount >= 7 && !showDeveloperSection {
-            showPasswordPrompt = true
+        if versionTapCount >= 7 && !showDeveloperSection && canUnlockDeveloperSection {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                showDeveloperSection = true
+            }
             versionTapCount = 0
         }
         
@@ -322,31 +311,10 @@ struct SettingsView: View {
             }
         }
     }
-    
-    private func verifyPassword() {
-        if passwordInput == devPassword {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                showDeveloperSection = true
-            }
-            
-            // Success haptic
-            #if os(iOS)
-            let notification = UINotificationFeedbackGenerator()
-            notification.notificationOccurred(.success)
-            #endif
-            
-            showPasswordPrompt = false
-            passwordInput = ""
-        } else {
-            // Wrong password haptic
-            #if os(iOS)
-            let notification = UINotificationFeedbackGenerator()
-            notification.notificationOccurred(.error)
-            #endif
-            
-            // Shake animation would go here
-            passwordInput = ""
-        }
+
+    private func isSafeExternalURL(_ url: URL) -> Bool {
+        guard url.scheme == "https", let host = url.host else { return false }
+        return host == "github.com" || host.hasSuffix(".github.com")
     }
 }
 

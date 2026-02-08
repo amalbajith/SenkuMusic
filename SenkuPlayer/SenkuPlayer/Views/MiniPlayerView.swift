@@ -52,7 +52,7 @@ struct MiniPlayerView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(song.title.normalizedForDisplay)
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(ModernTheme.textPrimary)
                             .lineLimit(1)
                         
                         HStack(spacing: 4) {
@@ -61,11 +61,11 @@ struct MiniPlayerView: View {
                                 .foregroundColor(ModernTheme.accentYellow)
                             
                             Text("•")
-                                .foregroundColor(.white.opacity(0.3))
+                                .foregroundColor(ModernTheme.textTertiary)
                                 
                             Text(song.artist.normalizedForDisplay)
                                 .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.6))
+                                .foregroundColor(ModernTheme.textSecondary)
                                 .lineLimit(1)
                         }
                     }
@@ -77,8 +77,13 @@ struct MiniPlayerView: View {
                         player.togglePlayPause()
                     } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(ModernTheme.pureBlack)
+                            .frame(width: 34, height: 34)
+                            .background(ModernTheme.accentGradient, in: Circle())
+                            .overlay {
+                                Circle().stroke(ModernTheme.borderStrong, lineWidth: 1)
+                            }
                     }
                     .padding(.trailing, 8)
                     
@@ -87,8 +92,13 @@ struct MiniPlayerView: View {
                         AudioPlayerManager.shared.playNext()
                     } label: {
                         Image(systemName: "forward.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(.white)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(ModernTheme.textPrimary)
+                            .frame(width: 34, height: 34)
+                            .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
+                            .overlay {
+                                Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                            }
                     }
                 }
                 .padding(.horizontal, 10)
@@ -103,7 +113,7 @@ struct MiniPlayerView: View {
                         
                         // Glassy border
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(ModernTheme.borderSubtle, lineWidth: 1)
                     }
                 )
                 .onAppear { updateBackgroundColor() }
@@ -127,6 +137,7 @@ struct MiniPlayerView: View {
                     }
                     .onEnded { value in
                         if value.translation.height > 80 {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             withAnimation(.spring()) {
                                 dragOffset = 300
                                 player.stop()

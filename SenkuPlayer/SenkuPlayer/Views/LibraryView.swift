@@ -62,7 +62,7 @@ struct LibraryView: View {
         HStack {
             Text("Library")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(ModernTheme.textPrimary)
             
             Spacer()
             
@@ -76,7 +76,7 @@ struct LibraryView: View {
                         .frame(width: 44, height: 44)
                         .background(
                             LinearGradient(
-                                colors: [ModernTheme.accentYellow, .orange],
+                                colors: [ModernTheme.accentYellow, ModernTheme.accentYellowSoft],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -90,7 +90,7 @@ struct LibraryView: View {
                 } label: {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundColor(Color.white.opacity(0.3))
+                        .foregroundColor(ModernTheme.textTertiary)
                 }
             }
         }
@@ -153,7 +153,7 @@ struct LibraryView: View {
                     .foregroundColor(ModernTheme.lightGray)
             )
             .font(ModernTheme.body())
-            .foregroundColor(.white)
+            .foregroundColor(ModernTheme.textPrimary)
             .padding(.vertical, 12)
             
             if !searchText.isEmpty {
@@ -166,7 +166,11 @@ struct LibraryView: View {
                 }
             }
         }
-        .background(Color.white.opacity(0.06))
+        .background(ModernTheme.backgroundSecondary)
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ModernTheme.borderSubtle, lineWidth: 1)
+        }
         .cornerRadius(12)
         .padding(.horizontal, 24)
     }
@@ -179,11 +183,11 @@ struct LibraryView: View {
             
             Text("Your library is empty")
                 .font(ModernTheme.title())
-                .foregroundColor(.white)
+                .foregroundColor(ModernTheme.textPrimary)
             
             Text("Import your music files to get started")
                 .font(ModernTheme.body())
-                .foregroundColor(ModernTheme.lightGray)
+                .foregroundColor(ModernTheme.textSecondary)
                 .multilineTextAlignment(.center)
             
             Button {
@@ -208,9 +212,13 @@ struct TabButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(isSelected ? ModernTheme.pureBlack : .white)
+                .foregroundColor(isSelected ? ModernTheme.pureBlack : ModernTheme.textPrimary)
                 .frame(width: 50, height: 50)
-                .background(isSelected ? Color.white : Color.white.opacity(0.1))
+                .background(isSelected ? ModernTheme.accentYellow : ModernTheme.backgroundSecondary)
+                .overlay {
+                    Circle()
+                        .stroke(isSelected ? ModernTheme.borderStrong : ModernTheme.borderSubtle, lineWidth: 1)
+                }
                 .cornerRadius(25)
         }
     }
