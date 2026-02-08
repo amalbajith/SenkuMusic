@@ -20,8 +20,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Select Xcode Version
-        run: sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
 
       - name: Set Version
         run: |
