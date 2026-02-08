@@ -9,6 +9,20 @@
 
 ---
 
+## 📱 Screenshots
+
+````carousel
+![Library](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/library.png)
+<!-- slide -->
+![Playlists](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/playlists.png)
+<!-- slide -->
+![Sync](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/sync.png)
+<!-- slide -->
+![Settings](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/settings.png)
+````
+
+---
+
 ## ✨ Features
 
 ### 🎨 Premium Design

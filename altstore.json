@@ -15,7 +15,10 @@
             "iconURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/logo%201.png",
             "headerURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/header.png",
             "screenshotURLs": [
-                "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/header.png"
+                "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/library.png",
+                "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/playlists.png",
+                "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/sync.png",
+                "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/settings.png"
             ],
             "tintColor": "#C6F806",
             "appPermissions": {
