@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.7.1",
+                    "date": "2026-02-08",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.7.1/SenkuMusic.ipa",
+                    "size": 2486167,
+                    "minOSVersion": "15.0",
+                    "localizedDescription": "PRODUCTION POLISH UPDATE:\n- ✨ STANDARDIZED UI: All padding and spacing now use consistent design tokens.\n- 🎨 REFINED LAYOUT: Improved visual balance with optimized artwork sizing.\n- 🏢 ENTERPRISE-GRADE: Professional polish across all 10+ screens.\n- 🔧 CONSISTENCY: Unified spacing for production-ready quality."
+                },
+                {
                     "version": "1.7.0",
                     "date": "2026-02-08",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.7.0/SenkuMusic.ipa",
