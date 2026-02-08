@@ -26,7 +26,7 @@
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.6.0/SenkuMusic.ipa",
                     "size": 1750129,
                     "minOSVersion": "15.0",
-                    "localizedDescription": "General improvements and bug fixes."
+                    "localizedDescription": "MAJOR UPDATE:\n- 🎨 COMPLETE REDESIGN: Introducing the new 'Acid Design' language with neon accents and glassmorphism.\n- 🎼 VISUALIZER: New real-time audio visualizer in the player view.\n- 🌊 MODERN THEME: Dynamic background colors extracted from album artwork.\n- 🚀 PERFORMANCE: Faster metadata fetching and improved scrolling optimization.\n- 🐛 BUG FIXES: Resolved issues with background playback and layout on smaller devices."
                 },
                 {
                     "version": "1.5.0",
