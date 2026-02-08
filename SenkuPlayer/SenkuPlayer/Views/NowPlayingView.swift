@@ -41,7 +41,7 @@ struct NowPlayingView: View {
             
             VStack(spacing: 0) {
                 header
-                    .padding(.top, 8)
+                    .padding(.top, 20)
                 
                 Spacer()
                     .frame(minHeight: 10, maxHeight: 20)

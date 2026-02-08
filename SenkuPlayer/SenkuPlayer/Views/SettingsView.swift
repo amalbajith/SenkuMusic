@@ -96,7 +96,7 @@ struct SettingsView: View {
             .foregroundColor(.white)
             .fontWeight(.bold)
             .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .padding(.top, 24)
     }
     
 
@@ -273,7 +273,7 @@ struct SettingsView: View {
                 Button {
                     handleVersionTap()
                 } label: {
-                    SettingsInfoRow(title: "Version", value: "1.4.0")
+                    SettingsInfoRow(title: "Version", value: "1.6.0")
                 }
                 .buttonStyle(.plain)
                 

@@ -234,9 +234,9 @@ struct SimpleSongRow: View {
                 .fill(isPlaying ? ModernTheme.backgroundSecondary : Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(isPlaying ? ModernTheme.accentYellow.opacity(0.5) : Color.clear, lineWidth: 1)
+                        .stroke(isPlaying ? ModernTheme.accentYellow.opacity(0.8) : Color.clear, lineWidth: 1.5)
                 )
-                .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.1) : .clear, radius: 10, x: 0, y: 5)
+                .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.2) : .clear, radius: 12, x: 0, y: 4)
         )
     }
     
