@@ -9,7 +9,7 @@
         {
             "name": "SenkuMusic",
             "bundleIdentifier": "org.amal.SenkuPlayer",
-            "developerName": "Amal Bajith",
+            "developerName": "Amal B Ajith",
             "subtitle": "Premium Local Music Player",
             "localizedDescription": "A beautiful, premium local music player for iOS with advanced organization and seamless device synchronization.\n\n✨ Features:\n- 🎨 Premium Design: Apple Music-inspired UI with dynamic themes and glassmorphism.\n- 🎵 Powerful Player: Background playback, Lock Screen controls, and Dynamic Island support.\n- 📚 Smart Library: Automatic metadata extraction and organized views.\n- ⚙️ Advanced: File transfer, Keep Screen Awake, and more.",
             "iconURL": "https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/SenkuPlayer/SenkuPlayer/Assets.xcassets/AppIcon.appiconset/logo%201.png",

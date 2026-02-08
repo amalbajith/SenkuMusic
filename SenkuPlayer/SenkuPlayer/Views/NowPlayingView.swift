@@ -119,7 +119,10 @@ struct NowPlayingView: View {
     private var albumArtwork: some View {
         Group {
             #if os(iOS)
-            let screenWidth = UIScreen.main.bounds.width
+            // Use windowScene to get screen bounds (UIScreen.main is deprecated in newer iOS versions)
+            let screenWidth = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first?.screen.bounds.width ?? 390
             #else
             let screenWidth = NSScreen.main?.frame.width ?? 800
             #endif
