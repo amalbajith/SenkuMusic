@@ -15,6 +15,8 @@ jobs:
   build:
     name: Build and Release
     runs-on: self-hosted # Change to 'macos-latest' if using GitHub Cloud Runners
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
     
     steps:
       - name: Checkout Code
