@@ -2,7 +2,7 @@
 
 > A beautiful, premium local music player for iOS with advanced organization and seamless device synchronization.
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-iOS%2017.0%2B-lightgrey.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -11,15 +11,12 @@
 
 ## 📱 Screenshots
 
-````carousel
-![Library](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/library.png)
-<!-- slide -->
-![Playlists](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/playlists.png)
-<!-- slide -->
-![Sync](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/sync.png)
-<!-- slide -->
-![Settings](https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/settings.png)
-````
+<p align="center">
+  <img src="https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/library.png" width="23%" />
+  <img src="https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/playlists.png" width="23%" />
+  <img src="https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/sync.png" width="23%" />
+  <img src="https://raw.githubusercontent.com/amalbajith/SenkuMusic/main/screenshots/settings.png" width="23%" />
+</p>
 
 ---
 
@@ -136,14 +133,21 @@
 
 ## 📝 Changelog
 
-### Version 1.4.0 (Current)
-- ✅ Added password-protected Developer Mode
-- ✅ Implemented Device Transfer feature with legal disclaimers
-- ✅ Enhanced UI with warning banners for experimental features
-- ✅ Fixed metadata extraction using async/await
-- ✅ Improved "Clear Library" to physically delete files
-- ✅ Added "Keep Screen Awake" toggle
-- ✅ Modernized screen dimension detection
+### Version 1.6.0 (Current)
+- ✅ **New Acid Design Language**: Complete UI overhaul with neon lime accents.
+- ✅ **Real-time Visualizer**: Dynamic Waveform animations in the player.
+- ✅ **Modern Theme System**: Color extraction from album artwork.
+- ✅ **Screenshots & AltStore**: Fully optimized presentation and metadata.
+- ✅ **Performance**: Faster library loading and scrolling optimizations.
+
+### Version 1.4.0
+- Added password-protected Developer Mode
+- Implemented Device Transfer feature with legal disclaimers
+- Enhanced UI with warning banners for experimental features
+- Fixed metadata extraction using async/await
+- Improved "Clear Library" to physically delete files
+- Added "Keep Screen Awake" toggle
+- Modernized screen dimension detection
 
 ### Version 1.3.0
 - Added custom playlists
