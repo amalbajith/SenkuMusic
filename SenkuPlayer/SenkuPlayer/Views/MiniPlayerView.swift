@@ -85,7 +85,7 @@ struct MiniPlayerView: View {
                                 Circle().stroke(ModernTheme.borderStrong, lineWidth: 1)
                             }
                     }
-                    .padding(.trailing, 8)
+                    .padding(.trailing, ModernTheme.miniPadding)
                     
                     // Next
                     Button {
@@ -101,8 +101,8 @@ struct MiniPlayerView: View {
                             }
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
+                .padding(.horizontal, ModernTheme.itemPadding)
+                .padding(.vertical, ModernTheme.miniPadding)
                 .background(
                     ZStack {
                         // Blurred background
@@ -122,7 +122,7 @@ struct MiniPlayerView: View {
 
             }
             .frame(height: 64)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, ModernTheme.cardPadding)
             .offset(y: dragOffset)
             #if os(iOS)
             .onTapGesture {

@@ -116,7 +116,7 @@ struct SyncView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, ModernTheme.screenPadding)
                     
                     Spacer()
                     
@@ -138,7 +138,7 @@ struct SyncView: View {
                                         .foregroundColor(ModernTheme.textSecondary)
                                 }
                             }
-                            .padding(.horizontal, 40)
+                            .padding(.horizontal, ModernTheme.screenPadding + 16)
                         }
                         
                         Button {
@@ -159,7 +159,7 @@ struct SyncView: View {
                         }
                         .disabled(multipeer.connectedPeers.isEmpty || isSyncActive)
                         .opacity(multipeer.connectedPeers.isEmpty || isSyncActive ? 0.5 : 1)
-                        .padding(.horizontal, 40)
+                        .padding(.horizontal, ModernTheme.screenPadding + 16)
                         .padding(.bottom, 30)
                     }
                 }

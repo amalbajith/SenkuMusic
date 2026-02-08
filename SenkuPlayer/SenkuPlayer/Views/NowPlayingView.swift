@@ -48,27 +48,27 @@ struct NowPlayingView: View {
                 
                 // Large Album Artwork
                 albumArtwork
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ModernTheme.screenPadding + 16) // Extra space for large artwork
                 
                 Spacer()
                     .frame(minHeight: 20, maxHeight: 30)
                 
                 songInfo
-                    .padding(.horizontal, 32)
+                    .padding(.horizontal, ModernTheme.screenPadding + 8)
                 
                 WaveformView(
                     isPlaying: player.isPlaying,
                     progress: player.currentTime / max(player.duration, 1),
                     songURL: player.currentSong?.url
                 )
-                .padding(.horizontal, 32)
+                .padding(.horizontal, ModernTheme.screenPadding + 8)
                 .padding(.top, 16)
                 
                 Spacer()
                     .frame(minHeight: 20, maxHeight: 30)
                 
                 playbackControls
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, ModernTheme.screenPadding + 16)
                     .padding(.bottom, 40)
             }
             .frame(maxWidth: .infinity)
@@ -111,7 +111,7 @@ struct NowPlayingView: View {
             // Buffer to keep title centered
             Color.clear.frame(width: 44, height: 44)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, ModernTheme.screenPadding)
 
     }
     

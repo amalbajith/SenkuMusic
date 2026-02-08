@@ -74,6 +74,20 @@ struct ModernTheme {
     static let cardSpacing: CGFloat = 16
     static let itemSpacing: CGFloat = 12
     
+    // MARK: - Layout Constants (Production Polish)
+    
+    /// Standard horizontal padding for main screen content
+    static let screenPadding: CGFloat = 24
+    
+    /// Standard padding inside cards and sections
+    static let cardPadding: CGFloat = 16
+    
+    /// Standard padding for list items and nested content
+    static let itemPadding: CGFloat = 12
+    
+    /// Minimal padding for small elements (icons, compact layouts)
+    static let miniPadding: CGFloat = 8
+    
     // MARK: - Typography
     
     static func heroTitle() -> Font {
