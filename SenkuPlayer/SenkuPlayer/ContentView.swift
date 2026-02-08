@@ -145,9 +145,13 @@ struct IOSLayout: View {
                 case 1:
                     NavigationStack {
                         PlaylistsListView(searchText: "")
+                            .navigationTitle("Playlists")
                     }
                 case 2:
-                    SyncView()  // Replaced NearbyShareView
+                    NavigationStack {
+                        SyncView()
+                            .navigationTitle("Sync")
+                    }
                 case 3:
                     SettingsView()
                 default:
@@ -156,8 +160,8 @@ struct IOSLayout: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .safeAreaInset(edge: .bottom) {
-                // Buffer for MiniPlayer + Navbar
-                Color.clear.frame(height: player.currentSong != nil ? 140 : 80)
+                // Buffer for MiniPlayer + Navbar (Fixed height to prevent jumping)
+                Color.clear.frame(height: 140)
             }
             
             VStack(spacing: 0) {
