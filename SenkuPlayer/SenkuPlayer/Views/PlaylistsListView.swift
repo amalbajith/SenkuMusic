@@ -202,14 +202,14 @@ struct FavoritesDetailView: View {
                             .font(.headline)
                              .foregroundColor(ModernTheme.pureBlack)
                              .frame(maxWidth: .infinity)
-                             .padding()
+                             .padding(ModernTheme.cardPadding)
                              .background(ModernTheme.accentGradient)
                              .cornerRadius(12)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, ModernTheme.screenPadding)
                 }
             }
-            .padding(.vertical, 24)
+            .padding(.vertical, ModernTheme.screenPadding)
             
             if songs.isEmpty {
                  VStack(spacing: 16) {
@@ -421,14 +421,14 @@ struct PlaylistDetailView: View {
                             .font(.headline)
                             .foregroundColor(ModernTheme.pureBlack)
                             .frame(maxWidth: .infinity)
-                            .padding()
+                            .padding(ModernTheme.cardPadding)
                             .background(Color.white)
                             .cornerRadius(12)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, ModernTheme.screenPadding)
                 }
             }
-            .padding(.vertical, 24)
+            .padding(.vertical, ModernTheme.screenPadding)
             
             if songs.isEmpty {
                 VStack(spacing: 16) {
@@ -520,13 +520,13 @@ struct EmptyPlaylistsView: View {
                 Label("Create Playlist", systemImage: "plus")
                     .font(.headline)
                     .foregroundColor(ModernTheme.pureBlack)
-                    .padding()
+                    .padding(ModernTheme.cardPadding)
                     .background(Color.white)
                     .cornerRadius(12)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .padding(ModernTheme.cardPadding)
     }
 }
 

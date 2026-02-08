@@ -50,7 +50,7 @@ struct EqualizerView: View {
                                     Text(preset.name)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .padding(.horizontal, 16)
+                                        .padding(.horizontal, ModernTheme.cardPadding)
                                         .padding(.vertical, 8)
                                         .background(player.activeEqualizerProfile.id == preset.id ? accentColor : Color.gray.opacity(0.2))
                                         .foregroundColor(.white)

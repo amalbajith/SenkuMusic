@@ -95,8 +95,8 @@ struct SettingsView: View {
             .font(ModernTheme.heroTitle())
             .foregroundColor(.white)
             .fontWeight(.bold)
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
+            .padding(.top, ModernTheme.screenPadding)
     }
     
 
@@ -105,7 +105,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Audio & Playback")
                 .sectionHeaderStyle()
-                .padding(.horizontal, 24)
+                .padding(.horizontal, ModernTheme.screenPadding)
             
             VStack(spacing: 12) {
                 NavigationLink(destination: EqualizerView()) {
@@ -137,7 +137,7 @@ struct SettingsView: View {
                     }
                 )
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
@@ -145,7 +145,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Library Statistics")
                 .sectionHeaderStyle()
-                .padding(.horizontal, 24)
+                .padding(.horizontal, ModernTheme.screenPadding)
             
             HStack(spacing: 12) {
                 VStack(spacing: 12) {
@@ -157,7 +157,7 @@ struct SettingsView: View {
                     statBox(title: "Playlists", value: "\(library.playlists.count)")
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
@@ -171,7 +171,7 @@ struct SettingsView: View {
                 .foregroundColor(ModernTheme.lightGray)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, ModernTheme.cardPadding)
         .cardBackground()
     }
     
@@ -181,7 +181,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Actions")
                 .sectionHeaderStyle()
-                .padding(.horizontal, 24)
+                .padding(.horizontal, ModernTheme.screenPadding)
             
             Button {
                 showingClearLibraryAlert = true
@@ -193,7 +193,7 @@ struct SettingsView: View {
                     isDestructive: true
                 )
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
@@ -201,7 +201,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Developer")
                 .sectionHeaderStyle()
-                .padding(.horizontal, 24)
+                .padding(.horizontal, ModernTheme.screenPadding)
             
             VStack(spacing: 12) {
                 SettingsInfoRow(title: "Developer", value: "Amal B Ajith")
@@ -221,13 +221,13 @@ struct SettingsView: View {
                 
                 Divider()
                     .background(ModernTheme.lightGray.opacity(0.3))
-                    .padding(.vertical, 8)
+                    .padding(.vertical, ModernTheme.miniPadding)
                 
                 Text("DEBUG FEATURES")
                     .font(ModernTheme.caption())
                     .foregroundColor(ModernTheme.lightGray)
                     .fontWeight(.bold)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, ModernTheme.cardPadding)
                 
                 SettingsToggleRow(icon: "doc.text", iconColor: .white, title: "Show File Extensions", isOn: $devShowFileExtensions)
                 SettingsToggleRow(icon: "photo", iconColor: .white, title: "Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
@@ -236,13 +236,13 @@ struct SettingsView: View {
                 
                 Divider()
                     .background(ModernTheme.lightGray.opacity(0.3))
-                    .padding(.vertical, 8)
+                    .padding(.vertical, ModernTheme.miniPadding)
                 
                 Text("EXPERIMENTAL FEATURES")
                     .font(ModernTheme.caption())
                     .foregroundColor(ModernTheme.lightGray)
                     .fontWeight(.bold)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, ModernTheme.cardPadding)
                 
                 Button {
                     devShowFileExtensions = false
@@ -258,7 +258,7 @@ struct SettingsView: View {
                     )
                 }
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
@@ -267,7 +267,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("About")
                 .sectionHeaderStyle()
-                .padding(.horizontal, 24)
+                .padding(.horizontal, ModernTheme.screenPadding)
             
             VStack(spacing: 12) {
                 Button {
@@ -279,7 +279,7 @@ struct SettingsView: View {
                 
                 SettingsInfoRow(title: "Build", value: "22")
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
@@ -344,7 +344,7 @@ struct SettingsToggleRow: View {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
         }
-        .padding(16)
+        .padding(ModernTheme.cardPadding)
         .cardBackground()
     }
 }
@@ -373,7 +373,7 @@ struct SettingsNavigationRow: View {
                 .font(.caption)
                 .foregroundColor(ModernTheme.lightGray)
         }
-        .padding(16)
+        .padding(ModernTheme.cardPadding)
         .cardBackground()
     }
 }

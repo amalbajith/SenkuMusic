@@ -34,7 +34,7 @@ struct AlbumsListView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding()
+                    .padding(ModernTheme.cardPadding)
                 }
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: player.currentSong != nil ? 80 : 0)

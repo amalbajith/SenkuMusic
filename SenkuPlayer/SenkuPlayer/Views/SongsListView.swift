@@ -33,7 +33,7 @@ struct SongsListView: View {
                     if filteredSongs.isEmpty && !searchText.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "magnifyingglass")
-                                .font(.system(size: 40))
+                                .font(.system(size: 40)) // Icon size
                                 .foregroundColor(ModernTheme.mediumGray)
                             Text("No matches for \"\(searchText)\"")
                                 .foregroundColor(ModernTheme.lightGray)
@@ -80,7 +80,7 @@ struct SongsListView: View {
                                 }
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                .listRowInsets(EdgeInsets(top: 4, leading: ModernTheme.cardPadding, bottom: 4, trailing: ModernTheme.cardPadding))
                             }
                         }
                         .listStyle(.plain)
@@ -227,8 +227,8 @@ struct SimpleSongRow: View {
                     .foregroundColor(ModernTheme.textTertiary)
             }
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.vertical, ModernTheme.miniPadding)
+        .padding(.horizontal, ModernTheme.itemPadding)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(isPlaying ? ModernTheme.backgroundSecondary : Color.clear)

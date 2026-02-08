@@ -53,7 +53,7 @@ struct MetadataFetcherView: View {
                         // Info
                         infoSection
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, ModernTheme.screenPadding)
                     .padding(.vertical, 20)
                 }
             }
@@ -182,7 +182,7 @@ struct MetadataFetcherView: View {
                     .foregroundColor(ModernTheme.lightGray)
             }
         }
-        .padding(24)
+        .padding(ModernTheme.screenPadding)
         .cardBackground()
     }
     
