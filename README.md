@@ -2,7 +2,7 @@
 
 > A beautiful, premium local music player for iOS with advanced organization and seamless device synchronization.
 
-![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-iOS%2017.0%2B-lightgrey.svg)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -133,7 +133,13 @@
 
 ## 📝 Changelog
 
-### Version 1.6.0 (Current)
+### Version 1.7.0 (Current)
+- ✅ **Smart Library Sync**: Intelligent catalog diffing only transfers missing songs.
+- ✅ **Concurrent Transfers**: Parallel streams for significantly faster data transfer.
+- ✅ **New Sync Dashboard**: Real-time progress bars, file counts, and status text.
+- ✅ **Stability & UI**: Fixed layout jumping and improved remote connection handling.
+
+### Version 1.6.0
 - ✅ **New Acid Design Language**: Complete UI overhaul with neon lime accents.
 - ✅ **Real-time Visualizer**: Dynamic Waveform animations in the player.
 - ✅ **Modern Theme System**: Color extraction from album artwork.
