@@ -270,13 +270,13 @@ struct SettingsView: View {
                 Button {
                     handleVersionTap()
                 } label: {
-                    groupedInfoRow(title: "Version", value: "1.8.2")
+                    groupedInfoRow(title: "Version", value: "1.8.3")
                 }
                 .buttonStyle(.plain)
                 
                 groupedDivider()
                 
-                groupedInfoRow(title: "Build", value: "29")
+                groupedInfoRow(title: "Build", value: "30")
             }
             .cardBackground()
             .padding(.horizontal, ModernTheme.screenPadding)
