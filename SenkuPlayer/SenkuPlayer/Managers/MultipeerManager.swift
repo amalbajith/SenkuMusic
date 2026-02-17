@@ -378,7 +378,7 @@ extension MultipeerManager {
         transferProgress = min(max(totalFraction / Double(active.count), 0), 1)
     }
 
-    private func makeSongBatches(from songs: [Song]) -> [[Song]] {
+    private nonisolated func makeSongBatches(from songs: [Song]) -> [[Song]] {
         var batches: [[Song]] = []
         var currentBatch: [Song] = []
         var currentBytes = 0
@@ -405,7 +405,7 @@ extension MultipeerManager {
         return batches
     }
 
-    private func createBatchArchive(from songs: [Song]) throws -> URL {
+    private nonisolated func createBatchArchive(from songs: [Song]) throws -> URL {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("senku-sync", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         let archiveURL = tempDir.appendingPathComponent("batch-\(UUID().uuidString).\(batchFileExtension)")
@@ -447,7 +447,7 @@ extension MultipeerManager {
         return archiveURL
     }
 
-    private func unpackBatchArchive(from archiveURL: URL, into musicDirectory: URL) throws -> [URL] {
+    private nonisolated func unpackBatchArchive(from archiveURL: URL, into musicDirectory: URL) throws -> [URL] {
         let inHandle = try FileHandle(forReadingFrom: archiveURL)
         defer { try? inHandle.close() }
 
@@ -498,7 +498,7 @@ extension MultipeerManager {
         return extracted
     }
 
-    private func uniqueDestinationURL(for filename: String, in directory: URL) -> URL {
+    private nonisolated func uniqueDestinationURL(for filename: String, in directory: URL) -> URL {
         var candidate = directory.appendingPathComponent(filename)
         if !FileManager.default.fileExists(atPath: candidate.path) {
             return candidate
@@ -515,7 +515,7 @@ extension MultipeerManager {
         return candidate
     }
 
-    private func readExactBytes(_ count: Int, from handle: FileHandle) throws -> Data {
+    private nonisolated func readExactBytes(_ count: Int, from handle: FileHandle) throws -> Data {
         var data = Data()
         data.reserveCapacity(count)
 
@@ -528,7 +528,7 @@ extension MultipeerManager {
         return data
     }
 
-    private func writeInteger<T: FixedWidthInteger>(_ value: T, to handle: FileHandle) throws {
+    private nonisolated func writeInteger<T: FixedWidthInteger>(_ value: T, to handle: FileHandle) throws {
         var littleEndian = value.littleEndian
         var data = Data(capacity: MemoryLayout<T>.size)
         for _ in 0..<MemoryLayout<T>.size {
@@ -538,7 +538,7 @@ extension MultipeerManager {
         try handle.write(contentsOf: data)
     }
 
-    private func readInteger<T: FixedWidthInteger>(from handle: FileHandle) throws -> T {
+    private nonisolated func readInteger<T: FixedWidthInteger>(from handle: FileHandle) throws -> T {
         let data = try readExactBytes(MemoryLayout<T>.size, from: handle)
         var result: T = 0
         for (shift, byte) in data.enumerated() {
