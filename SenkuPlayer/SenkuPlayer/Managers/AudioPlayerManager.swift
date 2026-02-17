@@ -62,6 +62,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
         setupEngine()
         setupRemoteCommandCenter()
         setupNotifications()
+        observeAppLifecycle()
     }
     
     // MARK: - Setup
@@ -501,9 +502,11 @@ class AudioPlayerManager: NSObject, ObservableObject {
     // MARK: - Timers
     private func startTimers() {
         playbackTimer?.invalidate()
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             self?.updatePlaybackLoop()
         }
+        timer.tolerance = 0.05 // Allow coalescing for battery savings
+        playbackTimer = timer
     }
     
     private func updatePlaybackLoop() {
@@ -558,6 +561,36 @@ class AudioPlayerManager: NSObject, ObservableObject {
     
     // MARK: - Notification Handlers
     private func setupNotifications() {
+    }
+    
+    // MARK: - App Lifecycle
+    private func observeAppLifecycle() {
+        #if os(iOS)
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.reduceTimerFrequency()
+        }
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            if self?.isPlaying == true {
+                self?.startTimers()
+            }
+        }
+        #endif
+    }
+    
+    private func reduceTimerFrequency() {
+        playbackTimer?.invalidate()
+        guard isPlaying else { return }
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.updateNowPlayingInfo()
+        }
+        timer.tolerance = 0.5
+        playbackTimer = timer
     }
     
     private func setupRemoteCommandCenter() {
