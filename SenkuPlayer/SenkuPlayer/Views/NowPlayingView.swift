@@ -220,8 +220,11 @@ struct NowPlayingView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .id(player.currentSong?.id)
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: player.currentSong?.id)
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .center)),
+            removal: .opacity.combined(with: .scale(scale: 1.05, anchor: .center))
+        ))
+        .animation(.spring(response: 0.5, dampingFraction: 0.85), value: player.currentSong?.id)
     }
     
     // MARK: - Album Metadata
