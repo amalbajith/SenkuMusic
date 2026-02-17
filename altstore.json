@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.1",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.1/SenkuMusic.ipa",
+                    "size": 2479344,
+                    "minOSVersion": "16.0",
+                    "localizedDescription": "v1.8.1 HOTFIX & UX UPDATE:\n- ⚡️ SWIFT 6 CRASH FIX: Resolved multicore crash in MultipeerManager.\n- 🎵 PLAYLIST OVERHAUL: New create sheet, searchable song picker, smooth flows.\n- ✨ MICRO-INTERACTIONS: Track transitions, haptics, swipe-to-skip.\n- 🔋 BATTERY SAVER: Optimized background timer.\n- ⚙️ CLEANER SETTINGS: Grouped iOS-style layout."
+                },
+                {
                     "version": "1.8.0",
                     "date": "2026-02-18",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.0/SenkuMusic.ipa",
