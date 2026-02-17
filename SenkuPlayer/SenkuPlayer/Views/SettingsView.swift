@@ -19,13 +19,11 @@ struct SettingsView: View {
     @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
     @AppStorage("gaplessPlayback") private var gaplessPlayback: Bool = true
 
-    
     // Developer Settings
     @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
     @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
     @AppStorage("devEnableDebugLogging") private var devEnableDebugLogging = false
     @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
-
 
     @State private var versionTapCount = 0
     @State private var showDeveloperSection = false
@@ -45,11 +43,10 @@ struct SettingsView: View {
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 28) {
                         headerSection
                         audioSection
-                        libraryStatsSection
-                        actionsSection
+                        librarySection
                         
                         if showDeveloperSection {
                             developerSection
@@ -78,7 +75,7 @@ struct SettingsView: View {
         }
         .alert("Clear Library", isPresented: $showingClearLibraryAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) {
+            Button("Clear All", role: .destructive) {
                 clearLibrary()
             }
         } message: {
@@ -88,7 +85,7 @@ struct SettingsView: View {
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - View Sections
+    // MARK: - Header
     
     private var headerSection: some View {
         Text("Settings")
@@ -99,189 +96,283 @@ struct SettingsView: View {
             .padding(.top, ModernTheme.screenPadding)
     }
     
-
+    // MARK: - Audio & Playback (single card)
     
     private var audioSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Audio & Playback")
                 .sectionHeaderStyle()
                 .padding(.horizontal, ModernTheme.screenPadding)
             
-            VStack(spacing: 12) {
+            VStack(spacing: 0) {
+                // Equalizer
                 NavigationLink(destination: EqualizerView()) {
-                    SettingsNavigationRow(
-                        icon: "slider.vertical.3",
-                        iconColor: .white,
-                        title: "Equalizer"
-                    )
+                    groupedRow(icon: "slider.vertical.3", title: "Equalizer", showChevron: true)
                 }
                 .buttonStyle(.plain)
                 
-
-                SettingsToggleRow(
-                    icon: "arrow.triangle.merge",
-                    iconColor: .white,
-                    title: "Gapless Playback",
-                    isOn: $gaplessPlayback
-                )
+                groupedDivider()
                 
-                SettingsSliderRow(
-                    icon: "arrow.left.and.right.square.fill",
-                    iconColor: .white,
-                    title: "Crossfade",
-                    value: $crossfadeDuration,
-                    range: 0...12,
-                    step: 1,
-                    valueFormatter: { value in
-                        value == 0 ? "Off" : String(format: "%.1fs", value)
+                // Gapless Playback
+                groupedToggleRow(icon: "arrow.triangle.merge", title: "Gapless Playback", isOn: $gaplessPlayback)
+                
+                groupedDivider()
+                
+                // Crossfade
+                VStack(spacing: 10) {
+                    HStack(spacing: 12) {
+                        settingsIcon("arrow.left.and.right.square.fill")
+                        
+                        Text("Crossfade")
+                            .font(ModernTheme.body())
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Text(crossfadeDuration == 0 ? "Off" : String(format: "%.0fs", crossfadeDuration))
+                            .font(ModernTheme.body())
+                            .foregroundColor(ModernTheme.lightGray)
                     }
-                )
+                    
+                    Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                        .tint(ModernTheme.accentYellow)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
+            .cardBackground()
             .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
-    private var libraryStatsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Library Statistics")
+    // MARK: - Library (stats + actions in one section)
+    
+    private var librarySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Library")
                 .sectionHeaderStyle()
                 .padding(.horizontal, ModernTheme.screenPadding)
             
-            HStack(spacing: 12) {
-                VStack(spacing: 12) {
-                    statBox(title: "Songs", value: "\(library.songs.count)")
-                    statBox(title: "Artists", value: "\(library.artists.count)")
-                }
-                VStack(spacing: 12) {
-                    statBox(title: "Albums", value: "\(library.albums.count)")
-                    statBox(title: "Playlists", value: "\(library.playlists.count)")
-                }
+            // Stats row - compact horizontal
+            HStack(spacing: 0) {
+                statItem(value: "\(library.songs.count)", label: "Songs")
+                statDivider()
+                statItem(value: "\(library.albums.count)", label: "Albums")
+                statDivider()
+                statItem(value: "\(library.artists.count)", label: "Artists")
+                statDivider()
+                statItem(value: "\(library.playlists.count)", label: "Playlists")
             }
+            .padding(.vertical, 16)
+            .cardBackground()
             .padding(.horizontal, ModernTheme.screenPadding)
-        }
-    }
-    
-    private func statBox(title: String, value: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .black))
-                .foregroundColor(ModernTheme.lightGray)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, ModernTheme.cardPadding)
-        .cardBackground()
-    }
-    
-
-    
-    private var actionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Actions")
-                .sectionHeaderStyle()
-                .padding(.horizontal, ModernTheme.screenPadding)
             
+            // Clear library action
             Button {
                 showingClearLibraryAlert = true
             } label: {
-                SettingsActionRow(
-                    icon: "trash",
-                    iconColor: .red,
-                    title: "Clear Library",
-                    isDestructive: true
-                )
+                HStack(spacing: 12) {
+                    settingsIcon("trash", color: .red)
+                    
+                    Text("Clear Library")
+                        .font(ModernTheme.body())
+                        .foregroundColor(.red)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .cardBackground()
             }
             .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
     
+    // MARK: - Developer (hidden section)
+    
     private var developerSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Developer")
                 .sectionHeaderStyle()
                 .padding(.horizontal, ModernTheme.screenPadding)
             
-            VStack(spacing: 12) {
-                SettingsInfoRow(title: "Developer", value: "Amal B Ajith")
+            VStack(spacing: 0) {
+                // Info
+                groupedInfoRow(title: "Developer", value: "Amal B Ajith")
                 
+                groupedDivider()
+                
+                // GitHub
                 Button {
                     if let url = URL(string: "https://github.com/iamalbajith"), isSafeExternalURL(url) {
                         openURL(url)
                     }
                 } label: {
-                    SettingsNavigationRow(
-                        icon: "link",
-                        iconColor: .white,
-                        title: "GitHub"
-                    )
+                    groupedRow(icon: "link", title: "GitHub", showChevron: true)
                 }
                 .buttonStyle(.plain)
                 
-                Divider()
-                    .background(ModernTheme.lightGray.opacity(0.3))
-                    .padding(.vertical, ModernTheme.miniPadding)
+                groupedDivider()
                 
-                Text("DEBUG FEATURES")
-                    .font(ModernTheme.caption())
+                // Debug header
+                Text("DEBUG")
+                    .font(.system(size: 10, weight: .black))
                     .foregroundColor(ModernTheme.lightGray)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, ModernTheme.cardPadding)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 6)
                 
-                SettingsToggleRow(icon: "doc.text", iconColor: .white, title: "Show File Extensions", isOn: $devShowFileExtensions)
-                SettingsToggleRow(icon: "photo", iconColor: .white, title: "Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
-                SettingsToggleRow(icon: "terminal", iconColor: .white, title: "Enable Console Logging", isOn: $devEnableDebugLogging)
-                SettingsToggleRow(icon: "sparkles", iconColor: .white, title: "Force Vibrant UI", isOn: $devForceVibrantBackground)
+                groupedToggleRow(icon: "doc.text", title: "Show File Extensions", isOn: $devShowFileExtensions)
+                groupedDivider()
+                groupedToggleRow(icon: "photo", title: "Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
+                groupedDivider()
+                groupedToggleRow(icon: "terminal", title: "Console Logging", isOn: $devEnableDebugLogging)
+                groupedDivider()
+                groupedToggleRow(icon: "sparkles", title: "Force Vibrant UI", isOn: $devForceVibrantBackground)
                 
-                Divider()
-                    .background(ModernTheme.lightGray.opacity(0.3))
-                    .padding(.vertical, ModernTheme.miniPadding)
+                groupedDivider()
                 
-                Text("EXPERIMENTAL FEATURES")
-                    .font(ModernTheme.caption())
-                    .foregroundColor(ModernTheme.lightGray)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, ModernTheme.cardPadding)
-                
+                // Reset
                 Button {
                     devShowFileExtensions = false
                     devDisableArtworkAnimation = false
                     devEnableDebugLogging = false
                     devForceVibrantBackground = false
                 } label: {
-                    SettingsActionRow(
-                        icon: "arrow.counterclockwise",
-                        iconColor: .red,
-                        title: "Reset Dev Settings",
-                        isDestructive: true
-                    )
+                    HStack(spacing: 12) {
+                        settingsIcon("arrow.counterclockwise", color: .red)
+                        
+                        Text("Reset Dev Settings")
+                            .font(ModernTheme.body())
+                            .foregroundColor(.red)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
                 }
             }
+            .cardBackground()
             .padding(.horizontal, ModernTheme.screenPadding)
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
     
+    // MARK: - About
+    
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("About")
                 .sectionHeaderStyle()
                 .padding(.horizontal, ModernTheme.screenPadding)
             
-            VStack(spacing: 12) {
+            VStack(spacing: 0) {
                 Button {
                     handleVersionTap()
                 } label: {
-                    SettingsInfoRow(title: "Version", value: "1.8.0")
+                    groupedInfoRow(title: "Version", value: "1.8.0")
                 }
                 .buttonStyle(.plain)
                 
-                SettingsInfoRow(title: "Build", value: "25")
+                groupedDivider()
+                
+                groupedInfoRow(title: "Build", value: "26")
             }
+            .cardBackground()
             .padding(.horizontal, ModernTheme.screenPadding)
         }
     }
+    
+    // MARK: - Shared Components
+    
+    private func settingsIcon(_ name: String, color: Color = .white) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(color)
+            .frame(width: 32, height: 32)
+            .background(ModernTheme.mediumGray)
+            .cornerRadius(8)
+    }
+    
+    private func groupedRow(icon: String, title: String, showChevron: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            settingsIcon(icon)
+            
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(ModernTheme.lightGray.opacity(0.6))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+    
+    private func groupedToggleRow(icon: String, title: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            settingsIcon(icon)
+            
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+    
+    private func groupedInfoRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(ModernTheme.body())
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text(value)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+    
+    private func groupedDivider() -> some View {
+        Divider()
+            .background(ModernTheme.lightGray.opacity(0.15))
+            .padding(.leading, 60)
+    }
+    
+    private func statItem(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.white)
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(ModernTheme.lightGray)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private func statDivider() -> some View {
+        Rectangle()
+            .fill(ModernTheme.lightGray.opacity(0.15))
+            .frame(width: 1, height: 30)
+    }
+    
+    // MARK: - Logic
     
     private func clearLibrary() {
         library.deleteAllSongs()
@@ -290,13 +381,10 @@ struct SettingsView: View {
     private func handleVersionTap() {
         versionTapCount += 1
         
-        // Haptic feedback
         #if os(iOS)
-        let impact = UIImpactFeedbackGenerator(style: .light)
-        impact.impactOccurred()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
         
-        // Show password prompt after 7 taps
         if versionTapCount >= 7 && !showDeveloperSection && canUnlockDeveloperSection {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                 showDeveloperSection = true
@@ -304,7 +392,6 @@ struct SettingsView: View {
             versionTapCount = 0
         }
         
-        // Reset counter after 2 seconds of inactivity
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             if versionTapCount < 7 {
                 versionTapCount = 0
@@ -315,151 +402,6 @@ struct SettingsView: View {
     private func isSafeExternalURL(_ url: URL) -> Bool {
         guard url.scheme == "https", let host = url.host else { return false }
         return host == "github.com" || host.hasSuffix(".github.com")
-    }
-}
-
-// MARK: - Settings Row Components
-
-struct SettingsToggleRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    @Binding var isOn: Bool
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundColor(iconColor)
-                .frame(width: 44, height: 44)
-                .background(ModernTheme.mediumGray)
-                .cornerRadius(ModernTheme.smallRadius)
-            
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-        }
-        .padding(ModernTheme.cardPadding)
-        .cardBackground()
-    }
-}
-
-struct SettingsNavigationRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundColor(iconColor)
-                .frame(width: 44, height: 44)
-                .background(ModernTheme.mediumGray)
-                .cornerRadius(ModernTheme.smallRadius)
-            
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(ModernTheme.lightGray)
-        }
-        .padding(ModernTheme.cardPadding)
-        .cardBackground()
-    }
-}
-
-struct SettingsInfoRow: View {
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Text(value)
-                .font(ModernTheme.body())
-                .foregroundColor(ModernTheme.lightGray)
-        }
-        .padding(16)
-        .cardBackground()
-    }
-}
-
-struct SettingsActionRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    let isDestructive: Bool
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundColor(iconColor)
-                .frame(width: 44, height: 44)
-                .background(ModernTheme.mediumGray)
-                .cornerRadius(ModernTheme.smallRadius)
-            
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(isDestructive ? .red : .white)
-            
-            Spacer()
-        }
-        .padding(16)
-        .cardBackground()
-    }
-}
-
-struct SettingsSliderRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    @Binding var value: Double
-    let range: ClosedRange<Double>
-    let step: Double
-    let valueFormatter: (Double) -> String
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundColor(iconColor)
-                    .frame(width: 44, height: 44)
-                    .background(ModernTheme.mediumGray)
-                    .cornerRadius(ModernTheme.smallRadius)
-                
-                Text(title)
-                    .font(ModernTheme.body())
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Text(valueFormatter(value))
-                    .font(ModernTheme.body())
-                    .foregroundColor(ModernTheme.lightGray)
-            }
-            
-            Slider(value: $value, in: range, step: step)
-                .tint(ModernTheme.accentYellow)
-        }
-        .padding(16)
-        .cardBackground()
     }
 }
 
