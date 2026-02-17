@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.4",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.4/SenkuMusic.ipa",
+                    "size": 2477158,
+                    "minOSVersion": "16.0",
+                    "localizedDescription": "v1.8.4 UI POLISH:\n- ✨ REFINED TRANSITIONS: Replaced slide with smooth scale+fade for song titles.\n- 🚀 PERFORMANCE: Includes 120Hz waveform fix for silky smoothness."
+                },
+                {
                     "version": "1.8.3",
                     "date": "2026-02-18",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.3/SenkuMusic.ipa",
