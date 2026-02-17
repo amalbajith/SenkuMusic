@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.5",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.5/SenkuMusic.ipa",
+                    "size": 2477819,
+                    "minOSVersion": "16.0",
+                    "localizedDescription": "v1.8.5 FPS & ANIMATION BOOST:\n- 🚀 Guaranteed 120Hz/60Hz smoothness on supported devices.\n- ✨ Fixed choppy dismissal animation when swiping down.\n- 🎨 Flattened artwork rendering for maximum GPU efficiency."
+                },
+                {
                     "version": "1.8.4",
                     "date": "2026-02-18",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.4/SenkuMusic.ipa",
