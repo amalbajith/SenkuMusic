@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.3",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.3/SenkuMusic.ipa",
+                    "size": 2477680,
+                    "minOSVersion": "16.0",
+                    "localizedDescription": "v1.8.3 PERFORMANCE & LAG FIX:\n- 🚀 HUGE FPS BOOST: Rewrote waveform visualizer to fix 120Hz main thread congestion.\n- ✨ SMOOTH GESTURES: Swipe and drag gestures are now silky smooth.\n- 📂 FILE SHARING INCLUDED: Access app folder via Finder/Files."
+                },
+                {
                     "version": "1.8.2",
                     "date": "2026-02-18",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.2/SenkuMusic.ipa",
