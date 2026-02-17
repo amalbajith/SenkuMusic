@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.2",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.2/SenkuMusic.ipa",
+                    "size": 2479388,
+                    "minOSVersion": "16.0",
+                    "localizedDescription": "v1.8.2 FILE SHARING UPDATE:\n- 📂 ENABLED FILE SHARING: Access your song library directly from Finder on Mac or Files app on iOS.\n- 💻 EASY IMPORT: Drag-and-drop songs from your computer to the app folder.\n- ⚡️ SWIFT 6 FIXED: Includes all previous crash fixes."
+                },
+                {
                     "version": "1.8.1",
                     "date": "2026-02-18",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.1/SenkuMusic.ipa",
