@@ -80,6 +80,23 @@ struct NowPlayingView: View {
         .onAppear {
             updateBackgroundColor()
         }
+        #if os(iOS)
+        .gesture(
+            DragGesture(minimumDistance: 50)
+                .onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = abs(value.translation.height)
+                    guard abs(horizontal) > vertical else { return } // Must be more horizontal than vertical
+                    if horizontal < -50 {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        player.playNext()
+                    } else if horizontal > 50 {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        player.playPrevious()
+                    }
+                }
+        )
+        #endif
     }
     
     // MARK: - Header
@@ -135,6 +152,11 @@ struct NowPlayingView: View {
                 ArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
                     .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
                     .animation(.spring(response: 0.6, dampingFraction: 0.7), value: player.isPlaying)
+                    .id(song.id)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.92)),
+                        removal: .opacity
+                    ))
             } else {
                 // Fallback
                 ArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
@@ -197,6 +219,9 @@ struct NowPlayingView: View {
             albumMetadata
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .id(player.currentSong?.id)
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: player.currentSong?.id)
     }
     
     // MARK: - Album Metadata
@@ -220,6 +245,9 @@ struct NowPlayingView: View {
             HStack(spacing: 40) {
                 // Previous
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
                     player.playPrevious()
                 } label: {
                     Image(systemName: "backward.fill")
@@ -235,6 +263,9 @@ struct NowPlayingView: View {
                 
                 // Play/Pause - The Star Button
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    #endif
                     player.togglePlayPause()
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
@@ -246,6 +277,9 @@ struct NowPlayingView: View {
                 
                 // Next
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
                     player.playNext()
                 } label: {
                     Image(systemName: "forward.fill")
@@ -264,6 +298,9 @@ struct NowPlayingView: View {
             HStack(spacing: 60) {
                 // Shuffle
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
                     player.toggleShuffle()
                 } label: {
                     Image(systemName: player.isShuffled ? "shuffle.circle.fill" : "shuffle")
@@ -271,11 +308,15 @@ struct NowPlayingView: View {
                         .foregroundColor(player.isShuffled ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                         .frame(width: 50, height: 50)
                         .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
+                        .symbolEffect(.bounce, value: player.isShuffled)
                 }
                 
                 // Heart (Favorite)
                 if let song = player.currentSong {
                     Button {
+                        #if os(iOS)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
                         favoritesManager.toggleFavorite(song: song)
                     } label: {
                         Image(systemName: favoritesManager.isFavorite(song: song) ? "heart.fill" : "heart")
@@ -289,6 +330,9 @@ struct NowPlayingView: View {
                 
                 // Repeat
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
                     player.toggleRepeat()
                 } label: {
                     Group {
@@ -305,6 +349,7 @@ struct NowPlayingView: View {
                     .foregroundColor(player.repeatMode != .off ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                     .frame(width: 50, height: 50)
                     .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
+                    .symbolEffect(.bounce, value: player.repeatMode)
                 }
             }
         }
