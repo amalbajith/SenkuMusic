@@ -6,22 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXCopyFilesBuildPhase section */
-		E552A8552F0D61CB002C6380 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
+
 
 /* Begin PBXFileReference section */
 		04C2CAF02F03F27200EC1A12 /* SenkuPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SenkuPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E552A8572F0D62DA002C6380 /* SenkuWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SenkuWidgetExtension.entitlements; sourceTree = "<group>"; };
+
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +48,7 @@
 		04C2CAE72F03F27200EC1A12 = {
 			isa = PBXGroup;
 			children = (
-				E552A8572F0D62DA002C6380 /* SenkuWidgetExtension.entitlements */,
+
 				04C2CAF22F03F27200EC1A12 /* SenkuPlayer */,
 				04C2CAF12F03F27200EC1A12 /* Products */,
 			);
@@ -83,7 +72,7 @@
 				04C2CAEC2F03F27200EC1A12 /* Sources */,
 				04C2CAED2F03F27200EC1A12 /* Frameworks */,
 				04C2CAEE2F03F27200EC1A12 /* Resources */,
-				E552A8552F0D61CB002C6380 /* Embed Foundation Extensions */,
+
 			);
 			buildRules = (
 			);
