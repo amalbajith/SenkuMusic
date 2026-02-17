@@ -24,76 +24,167 @@ struct PlaylistsListView: View {
     }
     
     var body: some View {
-        VStack {
-            if filteredPlaylists.isEmpty && searchText.isEmpty {
-                EmptyPlaylistsView {
-                    showingCreatePlaylist = true
-                }
-            } else {
-                List {
-                    // Favorites Section
-                    if searchText.isEmpty {
-                        NavigationLink(destination: FavoritesDetailView()) {
-                            FavoritesRow()
-                        }
+        NavigationStack {
+            VStack {
+                if filteredPlaylists.isEmpty && searchText.isEmpty {
+                    EmptyPlaylistsView {
+                        showingCreatePlaylist = true
                     }
-                    
-                    
-                    ForEach(filteredPlaylists) { playlist in
-                        NavigationLink(destination: PlaylistDetailView(playlistID: playlist.id)) {
-                            PlaylistRow(playlistID: playlist.id)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                library.deletePlaylist(playlist)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                } else {
+                    List {
+                        // Favorites Section
+                        if searchText.isEmpty {
+                            NavigationLink(destination: FavoritesDetailView()) {
+                                FavoritesRow()
                             }
                         }
+                        
+                        
+                        ForEach(filteredPlaylists) { playlist in
+                            NavigationLink(destination: PlaylistDetailView(playlistID: playlist.id)) {
+                                PlaylistRow(playlistID: playlist.id)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        library.deletePlaylist(playlist)
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .onDelete(perform: deletePlaylists)
                     }
-                    .onDelete(perform: deletePlaylists)
-                }
-                .listStyle(.plain)
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                    .listStyle(.plain)
+                    .safeAreaInset(edge: .bottom) {
+                        Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                    }
                 }
             }
+            .navigationTitle("Playlists")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        showingCreatePlaylist = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingCreatePlaylist) {
+                CreatePlaylistSheet(isPresented: $showingCreatePlaylist)
+            }
+            .preferredColorScheme(.dark)
         }
-        .navigationTitle("Playlists")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.large)
-        #endif
-        .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    showingCreatePlaylist = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
-        .alert("New Playlist", isPresented: $showingCreatePlaylist) {
-            TextField("Playlist Name", text: $newPlaylistName)
-            Button("Cancel", role: .cancel) {
-                newPlaylistName = ""
-            }
-            Button("Create") {
-                if !newPlaylistName.isEmpty {
-                    library.createPlaylist(name: newPlaylistName)
-                    newPlaylistName = ""
-                }
-            }
-        } message: {
-            Text("Enter a name for your new playlist")
-        }
-        .preferredColorScheme(.dark)
     }
     
     private func deletePlaylists(at offsets: IndexSet) {
-        for index in offsets {
-            let playlist = filteredPlaylists[index]
-            library.deletePlaylist(playlist)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            for index in offsets {
+                let playlist = filteredPlaylists[index]
+                library.deletePlaylist(playlist)
+            }
         }
+    }
+}
+
+// MARK: - Create Playlist Sheet
+
+struct CreatePlaylistSheet: View {
+    @Binding var isPresented: Bool
+    @StateObject private var library = MusicLibraryManager.shared
+    @State private var playlistName = ""
+    @FocusState private var isNameFocused: Bool
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 32) {
+                // Artwork preview
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        LinearGradient(
+                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 160, height: 160)
+                    .overlay {
+                        Image(systemName: "music.note.list")
+                            .font(.system(size: 50))
+                            .foregroundColor(ModernTheme.textTertiary)
+                    }
+                    .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
+                
+                // Name field
+                VStack(spacing: 8) {
+                    TextField("Playlist Name", text: $playlistName)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                        .focused($isNameFocused)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            createPlaylist()
+                        }
+                    
+                    Rectangle()
+                        .fill(ModernTheme.accentYellow)
+                        .frame(height: 2)
+                        .frame(maxWidth: 200)
+                        .opacity(isNameFocused ? 1 : 0.3)
+                        .animation(.easeInOut(duration: 0.2), value: isNameFocused)
+                }
+                .padding(.horizontal, 40)
+                
+                Spacer()
+            }
+            .padding(.top, 40)
+            .navigationTitle("New Playlist")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .foregroundColor(ModernTheme.textSecondary)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        createPlaylist()
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(playlistName.trimmingCharacters(in: .whitespaces).isEmpty ? ModernTheme.textTertiary : ModernTheme.accentYellow)
+                    .disabled(playlistName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isNameFocused = true
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .preferredColorScheme(.dark)
+    }
+    
+    private func createPlaylist() {
+        let trimmed = playlistName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+        
+        library.createPlaylist(name: trimmed)
+        isPresented = false
     }
 }
 
@@ -194,6 +285,9 @@ struct FavoritesDetailView: View {
                 
                 if !songs.isEmpty {
                     Button {
+                        #if os(iOS)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
                         if let firstSong = songs.first {
                             player.playSong(firstSong, in: songs, at: 0)
                         }
@@ -242,7 +336,9 @@ struct FavoritesDetailView: View {
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
-                                favorites.toggleFavorite(song: song)
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                    favorites.toggleFavorite(song: song)
+                                }
                             } label: {
                                 Label("Remove", systemImage: "heart.slash")
                             }
@@ -385,6 +481,7 @@ struct PlaylistDetailView: View {
     @StateObject private var player = AudioPlayerManager.shared
     let playlistID: UUID
     @Environment(\.dismiss) private var dismiss
+    @State private var showingAddSongs = false
     
     private var playlist: Playlist? {
         library.playlists.first { $0.id == playlistID }
@@ -411,22 +508,38 @@ struct PlaylistDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                if !songs.isEmpty {
-                    Button {
-                        if let firstSong = songs.first {
-                            player.playSong(firstSong, in: songs, at: 0)
+                HStack(spacing: 12) {
+                    if !songs.isEmpty {
+                        Button {
+                            #if os(iOS)
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            #endif
+                            if let firstSong = songs.first {
+                                player.playSong(firstSong, in: songs, at: 0)
+                            }
+                        } label: {
+                            Label("Play", systemImage: "play.fill")
+                                .font(.headline)
+                                .foregroundColor(ModernTheme.pureBlack)
+                                .frame(maxWidth: .infinity)
+                                .padding(ModernTheme.cardPadding)
+                                .background(ModernTheme.accentGradient)
+                                .cornerRadius(12)
                         }
+                    }
+                    
+                    Button {
+                        showingAddSongs = true
                     } label: {
-                        Label("Play", systemImage: "play.fill")
+                        Image(systemName: "plus")
                             .font(.headline)
-                            .foregroundColor(ModernTheme.pureBlack)
-                            .frame(maxWidth: .infinity)
-                            .padding(ModernTheme.cardPadding)
-                            .background(Color.white)
+                            .foregroundColor(.white)
+                            .frame(width: 48, height: 48)
+                            .background(ModernTheme.mediumGray)
                             .cornerRadius(12)
                     }
-                    .padding(.horizontal, ModernTheme.screenPadding)
                 }
+                .padding(.horizontal, ModernTheme.screenPadding)
             }
             .padding(.vertical, ModernTheme.screenPadding)
             
@@ -440,7 +553,7 @@ struct PlaylistDetailView: View {
                         .font(.title3)
                         .fontWeight(.semibold)
                     
-                    Text("Add songs to this playlist")
+                    Text("Tap + to add songs to this playlist")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -478,21 +591,169 @@ struct PlaylistDetailView: View {
             }
             #endif
         }
+        .sheet(isPresented: $showingAddSongs) {
+            AddSongsToPlaylistView(playlistID: playlistID)
+        }
     }
     
     private func deleteSongs(at offsets: IndexSet) {
         guard var updatedPlaylist = playlist else { return }
-        for index in offsets {
-            let song = songs[index]
-            updatedPlaylist.removeSong(song.id)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            for index in offsets {
+                let song = songs[index]
+                updatedPlaylist.removeSong(song.id)
+            }
+            library.updatePlaylist(updatedPlaylist)
         }
-        library.updatePlaylist(updatedPlaylist)
     }
     
     private func moveSongs(from source: IndexSet, to destination: Int) {
         guard var updatedPlaylist = playlist else { return }
         updatedPlaylist.moveSong(from: source, to: destination)
         library.updatePlaylist(updatedPlaylist)
+    }
+}
+
+// MARK: - Add Songs to Playlist
+
+struct AddSongsToPlaylistView: View {
+    let playlistID: UUID
+    @StateObject private var library = MusicLibraryManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedSongIDs: Set<UUID> = []
+    @State private var searchText = ""
+    
+    private var playlist: Playlist? {
+        library.playlists.first { $0.id == playlistID }
+    }
+    
+    private var availableSongs: [Song] {
+        let existingIDs = Set(playlist?.songIDs ?? [])
+        let songs = library.songs.filter { !existingIDs.contains($0.id) }
+        if searchText.isEmpty { return songs }
+        let lower = searchText.lowercased()
+        return songs.filter {
+            $0.title.lowercased().contains(lower) ||
+            $0.artist.lowercased().contains(lower)
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack {
+                if availableSongs.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 50))
+                            .foregroundColor(ModernTheme.textTertiary)
+                        
+                        Text("All Songs Added")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        
+                        Text("Every song in your library is already in this playlist")
+                            .font(.subheadline)
+                            .foregroundColor(ModernTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .padding()
+                } else {
+                    List {
+                        ForEach(availableSongs) { song in
+                            Button {
+                                toggleSelection(song.id)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    // Artwork
+                                    Group {
+                                        if let artworkData = song.artworkData,
+                                           let platformImage = PlatformImage.fromData(artworkData) {
+                                            Image(platformImage: platformImage)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(ModernTheme.mediumGray)
+                                                .overlay {
+                                                    Image(systemName: "music.note")
+                                                        .foregroundColor(ModernTheme.textTertiary)
+                                                        .font(.caption)
+                                                }
+                                        }
+                                    }
+                                    .frame(width: 44, height: 44)
+                                    .cornerRadius(6)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(song.title)
+                                            .font(.body)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        Text(song.artist)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: selectedSongIDs.contains(song.id) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(selectedSongIDs.contains(song.id) ? ModernTheme.accentYellow : ModernTheme.textTertiary)
+                                        .font(.title3)
+                                        .animation(.easeInOut(duration: 0.15), value: selectedSongIDs.contains(song.id))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search songs")
+            .navigationTitle("Add Songs")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(ModernTheme.textSecondary)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add (\(selectedSongIDs.count))") {
+                        addSelectedSongs()
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(selectedSongIDs.isEmpty ? ModernTheme.textTertiary : ModernTheme.accentYellow)
+                    .disabled(selectedSongIDs.isEmpty)
+                }
+            }
+        }
+        .presentationDragIndicator(.visible)
+        .preferredColorScheme(.dark)
+    }
+    
+    private func toggleSelection(_ id: UUID) {
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+        if selectedSongIDs.contains(id) {
+            selectedSongIDs.remove(id)
+        } else {
+            selectedSongIDs.insert(id)
+        }
+    }
+    
+    private func addSelectedSongs() {
+        guard let playlist = playlist else { return }
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+        library.addSongsToPlaylist(Array(selectedSongIDs), playlist: playlist)
+        dismiss()
     }
 }
 
@@ -503,7 +764,7 @@ struct EmptyPlaylistsView: View {
         VStack(spacing: 20) {
             Image(systemName: "music.note.list")
                 .font(.system(size: 60))
-                .foregroundColor(.gray)
+                .foregroundColor(ModernTheme.textTertiary)
             
             Text("No Playlists")
                 .font(.title2)
@@ -511,7 +772,7 @@ struct EmptyPlaylistsView: View {
             
             Text("Create a playlist to organize your music")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(ModernTheme.textSecondary)
                 .multilineTextAlignment(.center)
             
             Button {
@@ -521,7 +782,7 @@ struct EmptyPlaylistsView: View {
                     .font(.headline)
                     .foregroundColor(ModernTheme.pureBlack)
                     .padding(ModernTheme.cardPadding)
-                    .background(Color.white)
+                    .background(ModernTheme.accentGradient)
                     .cornerRadius(12)
             }
         }
