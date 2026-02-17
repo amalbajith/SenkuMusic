@@ -15,7 +15,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     let onSelect: ([URL]) -> Void
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .mp3], asCopy: false)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .mp3, .zip], asCopy: false)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = true
         picker.shouldShowFileExtensions = true
@@ -56,7 +56,7 @@ struct DocumentPicker: View {
                 let panel = NSOpenPanel()
                 panel.allowsMultipleSelection = true
                 panel.canChooseDirectories = false
-                panel.allowedContentTypes = [.audio, .mp3]
+                panel.allowedContentTypes = [.audio, .mp3, .zip]
                 
                 panel.begin { response in
                     if response == .OK {

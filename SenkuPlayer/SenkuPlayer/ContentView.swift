@@ -143,15 +143,9 @@ struct IOSLayout: View {
                 case 0:
                     LibraryView()
                 case 1:
-                    NavigationStack {
-                        PlaylistsListView(searchText: "")
-                            .navigationTitle("Playlists")
-                    }
+                    PlaylistsListView(searchText: "")
                 case 2:
-                    NavigationStack {
-                        SyncView()
-                            .navigationTitle("Sync")
-                    }
+                    SyncView()
                 case 3:
                     SettingsView()
                 default:

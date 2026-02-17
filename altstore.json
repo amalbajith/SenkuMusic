@@ -28,6 +28,14 @@
             },
             "versions": [
                 {
+                    "version": "1.8.0",
+                    "date": "2026-02-18",
+                    "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.8.0/SenkuMusic.ipa",
+                    "size": 2486167,
+                    "minOSVersion": "15.0",
+                    "localizedDescription": "ZIP IMPORT & SYNC UPDATE:\n- 📦 ZIP IMPORT: Import music from .zip archives directly from the file picker.\n- 🔄 ON-DEMAND SYNC: Multipeer only activates when you tap Go Online.\n- 🧹 CLEANER LIBRARY: Removed tab pills for a streamlined song list.\n- 🛠 LAYOUT FIX: Fixed double navigation bar issue on iOS."
+                },
+                {
                     "version": "1.7.1",
                     "date": "2026-02-08",
                     "downloadURL": "https://github.com/amalbajith/SenkuMusic/releases/download/v1.7.1/SenkuMusic.ipa",

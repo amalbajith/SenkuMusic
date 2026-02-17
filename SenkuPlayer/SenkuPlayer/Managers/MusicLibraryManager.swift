@@ -35,6 +35,9 @@ class MusicLibraryManager: ObservableObject {
     }
     
     // MARK: - Import & Scanning
+    
+    private static let allowedAudioExtensions = ["mp3", "m4a", "wav", "aac", "flac", "aiff"]
+    
     func importFiles(_ urls: [URL]) {
         isScanning = true
         scanProgress = 0
@@ -42,16 +45,38 @@ class MusicLibraryManager: ObservableObject {
         Task(priority: .background) { [weak self] in
             guard let self = self else { return }
             
+            // Separate zip files from audio files
+            var audioURLs: [URL] = []
+            var zipURLs: [URL] = []
+            
+            for url in urls {
+                let ext = url.pathExtension.lowercased()
+                if ext == "zip" {
+                    zipURLs.append(url)
+                } else if Self.allowedAudioExtensions.contains(ext) {
+                    audioURLs.append(url)
+                }
+            }
+            
+            // Extract audio files from zips
+            for zipURL in zipURLs {
+                let access = zipURL.startAccessingSecurityScopedResource()
+                defer { if access { zipURL.stopAccessingSecurityScopedResource() } }
+                
+                let extracted = self.extractAudioFromZip(zipURL)
+                audioURLs.append(contentsOf: extracted)
+            }
+            
+            // Now import all collected audio files
             var foundSongs: [Song] = []
             let musicDir = self.getMusicDirectory()
-            let total = Double(urls.count)
+            let total = Double(max(audioURLs.count, 1))
             
-            for (index, url) in urls.enumerated() {
+            for (index, url) in audioURLs.enumerated() {
                 let access = url.startAccessingSecurityScopedResource()
                 defer { if access { url.stopAccessingSecurityScopedResource() } }
                 
-                let allowedExtensions = ["mp3", "m4a", "wav", "aac", "flac", "aiff"]
-                if allowedExtensions.contains(url.pathExtension.lowercased()) {
+                if Self.allowedAudioExtensions.contains(url.pathExtension.lowercased()) {
                     // Safe Copy with Rename to prevent overwrite
                     var finalURL = musicDir.appendingPathComponent(url.lastPathComponent)
                     if self.fileManager.fileExists(atPath: finalURL.path) {
@@ -102,6 +127,55 @@ class MusicLibraryManager: ObservableObject {
             
             // Automatically fetch metadata for songs without artwork
             await self.autoFetchMetadata(for: foundSongs)
+        }
+    }
+    
+    // MARK: - Zip Extraction
+    
+    /// Extracts audio files from a zip archive into a temporary directory.
+    /// Returns URLs of the extracted audio files.
+    private func extractAudioFromZip(_ zipURL: URL) -> [URL] {
+        let tempDir = fileManager.temporaryDirectory
+            .appendingPathComponent("SenkuZipExtract_\(UUID().uuidString)", isDirectory: true)
+        
+        defer {
+            // Cleanup temp directory after we're done
+            try? fileManager.removeItem(at: tempDir)
+        }
+        
+        do {
+            let extractedFiles = try ZipExtractor.extract(zipURL: zipURL, to: tempDir)
+            
+            // Filter to only audio files
+            let audioFiles = extractedFiles.filter {
+                Self.allowedAudioExtensions.contains($0.pathExtension.lowercased())
+            }
+            
+            // Copy audio files to Music directory so they persist after temp cleanup
+            let musicDir = getMusicDirectory()
+            var copiedURLs: [URL] = []
+            
+            for fileURL in audioFiles {
+                var destURL = musicDir.appendingPathComponent(fileURL.lastPathComponent)
+                if fileManager.fileExists(atPath: destURL.path) {
+                    let name = fileURL.deletingPathExtension().lastPathComponent
+                    let ext = fileURL.pathExtension
+                    var counter = 1
+                    while fileManager.fileExists(atPath: destURL.path) {
+                        destURL = musicDir.appendingPathComponent("\(name) \(counter).\(ext)")
+                        counter += 1
+                    }
+                }
+                try fileManager.copyItem(at: fileURL, to: destURL)
+                copiedURLs.append(destURL)
+            }
+            
+            print("📦 Extracted \(copiedURLs.count) audio files from zip")
+            return copiedURLs
+            
+        } catch {
+            print("❌ Zip extraction failed: \(error.localizedDescription)")
+            return []
         }
     }
     

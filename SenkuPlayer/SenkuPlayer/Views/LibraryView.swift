@@ -12,7 +12,6 @@ struct LibraryView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @State private var searchText = ""
     @State private var showingFilePicker = false
-    @State private var selectedTab = 0
     
     var body: some View {
         NavigationStack {
@@ -28,12 +27,6 @@ struct LibraryView: View {
                     searchBarSection
                         .padding(.top, 16)
                     
-                    // Tab Selector
-                    if !library.songs.isEmpty && !library.isScanning {
-                        tabSelector
-                            .padding(.top, 20)
-                    }
-                    
                     // Content
                     Group {
                         if library.isScanning {
@@ -43,7 +36,7 @@ struct LibraryView: View {
                             emptyState
                                 .frame(maxHeight: .infinity)
                         } else {
-                            tabContent
+                            SongsListView(songs: library.songs, searchText: searchText)
                         }
                     }
                 }
@@ -98,48 +91,6 @@ struct LibraryView: View {
         .padding(.top, 24)
     }
     
-    
-    // MARK: - Tab Selector
-    private var tabSelector: some View {
-        HStack(spacing: 20) {
-            Spacer()
-            
-            TabButton(icon: "music.note", isSelected: selectedTab == 0) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 0
-                }
-            }
-            TabButton(icon: "clock", isSelected: selectedTab == 1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 1
-                }
-            }
-            TabButton(icon: "person.2", isSelected: selectedTab == 2) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = 2
-                }
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 24)
-    }
-    
-    // MARK: - Tab Content
-    private var tabContent: some View {
-        Group {
-            switch selectedTab {
-            case 0:
-                SongsListView(songs: library.songs, searchText: searchText)
-            case 1:
-                RecentlyPlayedView()
-            case 2:
-                ArtistsListView(searchText: searchText)
-            default:
-                SongsListView(songs: library.songs, searchText: searchText)
-            }
-        }
-    }
     
     // MARK: - Search Bar Section
     private var searchBarSection: some View {
@@ -202,27 +153,6 @@ struct LibraryView: View {
     }
 }
 
-// MARK: - Tab Button Component
-struct TabButton: View {
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(isSelected ? ModernTheme.pureBlack : ModernTheme.textPrimary)
-                .frame(width: 50, height: 50)
-                .background(isSelected ? ModernTheme.accentYellow : ModernTheme.backgroundSecondary)
-                .overlay {
-                    Circle()
-                        .stroke(isSelected ? ModernTheme.borderStrong : ModernTheme.borderSubtle, lineWidth: 1)
-                }
-                .cornerRadius(25)
-        }
-    }
-}
 
 // MARK: - Supporting Views
 

@@ -273,11 +273,11 @@ struct SettingsView: View {
                 Button {
                     handleVersionTap()
                 } label: {
-                    SettingsInfoRow(title: "Version", value: "1.7.1")
+                    SettingsInfoRow(title: "Version", value: "1.8.0")
                 }
                 .buttonStyle(.plain)
                 
-                SettingsInfoRow(title: "Build", value: "22")
+                SettingsInfoRow(title: "Build", value: "25")
             }
             .padding(.horizontal, ModernTheme.screenPadding)
         }
