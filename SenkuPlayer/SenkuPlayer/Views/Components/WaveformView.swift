@@ -14,19 +14,44 @@ struct WaveformView: View {
     let songURL: URL?
     
     @State private var amplitudes: [CGFloat] = []
-    @State private var animationTimer: Timer?
+    @State private var displayLink: CADisplayLink?
+    @State private var phase: Double = 0
     
     var body: some View {
-        GeometryReader { geometry in
-            HStack(alignment: .center, spacing: 3) {
-                ForEach(0..<barCount, id: \.self) { index in
-                    Capsule()
-                        .fill(barColor(for: index))
-                        .frame(width: 2, height: barHeight(for: index, maxHeight: geometry.size.height))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: amplitudes)
+        Canvas { context, size in
+            let barWidth: CGFloat = 2
+            let spacing: CGFloat = 3
+            let totalBarWidth = barWidth + spacing
+            let startX = (size.width - CGFloat(barCount) * totalBarWidth + spacing) / 2
+            
+            for index in 0..<barCount {
+                guard index < amplitudes.count else { continue }
+                
+                let normalizedIndex = Double(index) / Double(barCount)
+                let x = startX + CGFloat(index) * totalBarWidth
+                let height = max(size.height * 0.15, min(amplitudes[index], size.height * 0.95))
+                let y = (size.height - height) / 2
+                
+                let rect = CGRect(x: x, y: y, width: barWidth, height: height)
+                let path = Capsule().path(in: rect)
+                
+                if normalizedIndex <= progress {
+                    context.fill(path, with: .linearGradient(
+                        Gradient(colors: [ModernTheme.accentYellowSoft, ModernTheme.accentYellow]),
+                        startPoint: CGPoint(x: x, y: y),
+                        endPoint: CGPoint(x: x, y: y + height)
+                    ))
+                } else {
+                    context.fill(path, with: .linearGradient(
+                        Gradient(colors: [
+                            ModernTheme.textTertiary.opacity(0.45),
+                            ModernTheme.textTertiary.opacity(0.2)
+                        ]),
+                        startPoint: CGPoint(x: x, y: y),
+                        endPoint: CGPoint(x: x, y: y + height)
+                    ))
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(height: 80)
         .onAppear {
@@ -40,6 +65,7 @@ struct WaveformView: View {
                 startAnimation()
             } else {
                 stopAnimation()
+                generateWaveform()
             }
         }
         .onChange(of: songURL) { oldValue, newValue in
@@ -50,40 +76,10 @@ struct WaveformView: View {
         }
     }
     
-    private func barColor(for index: Int) -> LinearGradient {
-        let normalizedIndex = Double(index) / Double(barCount)
-        
-        if normalizedIndex <= progress {
-            return LinearGradient(
-                colors: [ModernTheme.accentYellowSoft, ModernTheme.accentYellow],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        } else {
-            return LinearGradient(
-                colors: [ModernTheme.textTertiary.opacity(0.45), ModernTheme.textTertiary.opacity(0.2)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-    }
-    
-    private func barHeight(for index: Int, maxHeight: CGFloat) -> CGFloat {
-        guard index < amplitudes.count else { return maxHeight * 0.2 }
-        
-        let baseHeight = amplitudes[index]
-        let minHeight = maxHeight * 0.15
-        let maxBarHeight = maxHeight * 0.95
-        
-        return max(minHeight, min(baseHeight, maxBarHeight))
-    }
-    
     private func generateWaveform() {
-        // Create a natural-looking waveform with variation
         amplitudes = (0..<barCount).map { index in
             let normalizedIndex = Double(index) / Double(barCount)
             
-            // Multiple sine waves for natural variation
             let wave1 = sin(normalizedIndex * .pi * 3) * 0.4
             let wave2 = sin(normalizedIndex * .pi * 7) * 0.3
             let wave3 = sin(normalizedIndex * .pi * 11) * 0.2
@@ -97,34 +93,43 @@ struct WaveformView: View {
     
     private func startAnimation() {
         stopAnimation()
-        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: true) { _ in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                updateAmplitudes()
-            }
-        }
+        let link = CADisplayLink(target: DisplayLinkTarget { [self] in
+            self.phase += 0.025
+            self.updateAmplitudes()
+        }, selector: #selector(DisplayLinkTarget.tick))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 120, preferred: 60)
+        link.add(to: .main, forMode: .common)
+        displayLink = link
     }
     
     private func stopAnimation() {
-        animationTimer?.invalidate()
-        animationTimer = nil
+        displayLink?.invalidate()
+        displayLink = nil
     }
     
     private func updateAmplitudes() {
-        let time = Date().timeIntervalSince1970
-        
         amplitudes = (0..<barCount).map { index in
             let normalizedIndex = Double(index) / Double(barCount)
             
-            // Animated waves
-            let wave1 = sin(normalizedIndex * .pi * 3 + time * 1.5) * 0.4
-            let wave2 = sin(normalizedIndex * .pi * 7 + time * 2.0) * 0.3
-            let wave3 = sin(normalizedIndex * .pi * 11 + time * 2.5) * 0.2
+            let wave1 = sin(normalizedIndex * .pi * 3 + phase * 1.5) * 0.4
+            let wave2 = sin(normalizedIndex * .pi * 7 + phase * 2.0) * 0.3
+            let wave3 = sin(normalizedIndex * .pi * 11 + phase * 2.5) * 0.2
             
             let combined = (wave1 + wave2 + wave3 + 1.0) / 2.0
-            let randomVariation = Double.random(in: 0.9...1.1)
             
-            return CGFloat(combined * randomVariation * 70 + 15)
+            return CGFloat(combined * 70 + 15)
         }
+    }
+}
+
+// MARK: - CADisplayLink Target Helper
+private class DisplayLinkTarget: NSObject {
+    let callback: () -> Void
+    init(callback: @escaping () -> Void) {
+        self.callback = callback
+    }
+    @objc func tick() {
+        callback()
     }
 }
 

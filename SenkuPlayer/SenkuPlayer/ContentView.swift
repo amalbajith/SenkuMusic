@@ -180,8 +180,8 @@ struct IOSLayout: View {
             }
             .ignoresSafeArea(.keyboard)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedTab)
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: player.currentSong != nil)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedTab)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: player.currentSong != nil)
     }
 }
 

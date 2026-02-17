@@ -29,7 +29,7 @@ struct NowPlayingView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            .animation(.linear(duration: 0.5), value: backgroundColor)
+            .animation(.easeInOut(duration: 0.6), value: backgroundColor)
             .overlay {
                 LinearGradient(
                     colors: [ModernTheme.pureBlack.opacity(0.15), ModernTheme.pureBlack.opacity(0.55)],
@@ -134,12 +134,12 @@ struct NowPlayingView: View {
                 
                 ArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
                     .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: player.isPlaying)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: player.isPlaying)
             } else {
                 // Fallback
                 ArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
                     .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: player.isPlaying)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: player.isPlaying)
             }
         }
     }

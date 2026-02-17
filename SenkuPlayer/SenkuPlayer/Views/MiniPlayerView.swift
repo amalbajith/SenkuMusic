@@ -20,7 +20,7 @@ struct MiniPlayerView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             let color = DominantColorExtractor.shared.extractDominantColor(for: song)
             DispatchQueue.main.async {
-                withAnimation {
+                withAnimation(.easeInOut(duration: 0.4)) {
                     self.backgroundColor = color
                 }
             }
@@ -138,7 +138,7 @@ struct MiniPlayerView: View {
                     .onEnded { value in
                         if value.translation.height > 80 {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            withAnimation(.spring()) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 dragOffset = 300
                                 player.stop()
                             }
@@ -146,7 +146,7 @@ struct MiniPlayerView: View {
                                 dragOffset = 0
                             }
                         } else {
-                            withAnimation(.spring()) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                 dragOffset = 0
                             }
                         }
