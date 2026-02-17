@@ -195,10 +195,11 @@ struct NowPlayingView: View {
                     .stroke(ModernTheme.borderSubtle, lineWidth: 1)
             }
             // Dynamic colored shadow
-            .shadow(color: glowingColor.opacity(0.5), radius: 25, x: 0, y: 12)
+            .shadow(color: glowingColor.opacity(0.4), radius: 20, x: 0, y: 10)
             // Depth shadow
-            .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 4)
         }
+        .drawingGroup() // Flatten hierarchy for smooth dismissal animation
     }
     
     // MARK: - Song Info
