@@ -263,16 +263,16 @@ struct FavoritesDetailView: View {
                         let artworkData = song.artworkData, 
                         let platformImage = PlatformImage.fromData(artworkData) {
                           Image(platformImage: platformImage)
-                              .resizable()
-                              .aspectRatio(contentMode: .fill)
-                              .frame(width: 200, height: 200)
-                              .cornerRadius(16)
-                              .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                               .resizable()
+                               .aspectRatio(contentMode: .fill)
+                               .frame(width: 200, height: 200)
+                               .cornerRadius(16)
+                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                      } else {
                           RoundedRectangle(cornerRadius: 16)
-                              .fill(ModernTheme.mediumGray)
-                              .frame(width: 200, height: 200)
-                              .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
+                               .fill(ModernTheme.mediumGray)
+                               .frame(width: 200, height: 200)
+                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                      }
                     
                     Image(systemName: "heart.fill")
@@ -327,7 +327,7 @@ struct FavoritesDetailView: View {
                  .frame(maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                    ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
                         SimpleSongRow(
                             song: song,
                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,
@@ -560,7 +560,7 @@ struct PlaylistDetailView: View {
                 .frame(maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+                    ForEach(Array(songs.enumerated()), id: \.offset) { index, song in
                         SimpleSongRow(
                             song: song,
                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,

@@ -4,6 +4,7 @@
 //
 //  Browse-first landing screen inspired by Apple Music-style rails
 //
+//
 
 import SwiftUI
 
@@ -84,7 +85,7 @@ struct HomeView: View {
             .onAppear {
                 updateHeroColor()
             }
-            .onChange(of: heroSong) { _, _ in
+            .onChange(of: heroSong?.id) { _, _ in
                 updateHeroColor()
             }
         }
@@ -294,7 +295,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(featuredSongs) { song in
+                    ForEach(Array(featuredSongs.enumerated()), id: \.offset) { index, song in
                         SongShelfCard(song: song) {
                             let queue = recentSongs.isEmpty ? library.songs : recentSongs
                             let index = queue.firstIndex(of: song) ?? 0
@@ -313,7 +314,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(featuredAlbums, id: \.id) { album in
+                    ForEach(Array(featuredAlbums.enumerated()), id: \.offset) { index, album in
                         NavigationLink(destination: AlbumDetailView(album: album)) {
                             HomeAlbumCard(album: album)
                         }
@@ -331,7 +332,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(featuredArtists, id: \.id) { artist in
+                    ForEach(Array(featuredArtists.enumerated()), id: \.offset) { index, artist in
                         NavigationLink(destination: ArtistDetailView(artist: artist)) {
                             HomeArtistCard(artist: artist)
                         }
@@ -348,7 +349,7 @@ struct HomeView: View {
             sectionHeader(title: "Favorite Mix", destination: AnyView(FavoritesDetailView()))
 
             VStack(spacing: 10) {
-                ForEach(favoriteSongs) { song in
+                ForEach(Array(favoriteSongs.enumerated()), id: \.offset) { index, song in
                     Button {
                         let queue = favoriteSongs
                         let index = queue.firstIndex(of: song) ?? 0
@@ -803,8 +804,4 @@ struct SongArtworkThumbnail: View {
             self.decodedImage = nil
         }
     }
-}
-
-#Preview {
-    HomeView()
 }

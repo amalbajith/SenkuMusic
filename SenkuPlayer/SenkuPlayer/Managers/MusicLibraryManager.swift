@@ -554,6 +554,20 @@ class MusicLibraryManager: ObservableObject {
     
     // MARK: - Library Organization (Optimized)
     func organizeLibrary() {
+        // CRITICAL: Ensure all songs in the library have unique IDs to prevent ForEach crashes
+        var seenIDs = Set<UUID>()
+        self.songs = self.songs.filter { song in
+            if seenIDs.contains(song.id) {
+                #if DEBUG
+                print("⚠️ MusicLibraryManager: Removing duplicate song ID from library: \(song.id)")
+                #endif
+                return false
+            } else {
+                seenIDs.insert(song.id)
+                return true
+            }
+        }
+
         // Use dictionary for faster lookup during organization
         var albumDict: [String: Album] = [:]
         var artistDict: [String: Artist] = [:]

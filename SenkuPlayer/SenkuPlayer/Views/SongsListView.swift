@@ -2,6 +2,7 @@
 //  SongsListView.swift
 //  SenkuPlayer
 //
+//
 
 import SwiftUI
 
@@ -46,7 +47,7 @@ struct SongsListView: View {
                         if displayMode == "List" {
                             ScrollView(showsIndicators: false) {
                                 LazyVStack(spacing: 8) {
-                                    ForEach(activeSongs) { song in
+                                    ForEach(Array(activeSongs.enumerated()), id: \.offset) { index, song in
                                         SimpleSongRow(
                                             song: song,
                                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,
@@ -98,7 +99,7 @@ struct SongsListView: View {
                         } else {
                             ScrollView {
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 16)], spacing: 24) {
-                                    ForEach(filteredSongs) { song in
+                                    ForEach(Array(filteredSongs.enumerated()), id: \.offset) { index, song in
                                         GridSongCard(
                                             song: song,
                                             isPlaying: player.currentSong?.id == song.id && player.isPlaying,
@@ -378,11 +379,5 @@ struct GridSongCard: View {
             }
         }
         .frame(width: 140)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        SongsListView(songs: [], searchText: "")
     }
 }
