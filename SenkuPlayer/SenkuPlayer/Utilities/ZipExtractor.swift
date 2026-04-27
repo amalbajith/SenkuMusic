@@ -29,7 +29,7 @@ struct ZipExtractor {
         }
     }
     
-    nonisolated(unsafe) private static let MAX_DECOMPRESSION_SIZE = 200 * 1024 * 1024 // 200MB limit for security
+    private static let MAX_DECOMPRESSION_SIZE = 200 * 1024 * 1024 // 200MB limit for security
     
     /// Extracts a zip archive to the given destination directory.
     /// Returns the list of extracted file URLs.
