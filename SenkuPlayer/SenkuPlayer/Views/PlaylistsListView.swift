@@ -12,6 +12,7 @@ struct PlaylistsListView: View {
     @StateObject private var player = AudioPlayerManager.shared
     let searchText: String
     @State private var showingCreatePlaylist = false
+    @State private var showingSpotifyImport = false
     @State private var newPlaylistName = ""
     
     private var filteredPlaylists: [Playlist] {
@@ -66,15 +67,26 @@ struct PlaylistsListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
-                    Button {
-                        showingCreatePlaylist = true
-                    } label: {
-                        Image(systemName: "plus")
+                    HStack {
+                        Button {
+                            showingSpotifyImport = true
+                        } label: {
+                            Image(systemName: "arrow.down.doc")
+                        }
+                        
+                        Button {
+                            showingCreatePlaylist = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
             .sheet(isPresented: $showingCreatePlaylist) {
                 CreatePlaylistSheet(isPresented: $showingCreatePlaylist)
+            }
+            .sheet(isPresented: $showingSpotifyImport) {
+                SpotifyImportView()
             }
             .preferredColorScheme(.dark)
         }

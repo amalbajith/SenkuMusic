@@ -29,7 +29,7 @@ struct ZipExtractor {
         }
     }
     
-    private static let MAX_DECOMPRESSION_SIZE = 200 * 1024 * 1024 // 200MB limit for security
+    nonisolated(unsafe) private static let MAX_DECOMPRESSION_SIZE = 200 * 1024 * 1024 // 200MB limit for security
     
     /// Extracts a zip archive to the given destination directory.
     /// Returns the list of extracted file URLs.
@@ -218,7 +218,7 @@ struct ZipExtractor {
         
         try zipData.write(to: destination)
     }
-
+    
     nonisolated private static func readUInt16(from data: Data, at offset: Int) -> UInt16 {
         guard offset + 2 <= data.count else { return 0 }
         var value: UInt16 = 0
@@ -247,4 +247,3 @@ struct ZipExtractor {
         data.append(Data(bytes: &v, count: 4))
     }
 }
-
