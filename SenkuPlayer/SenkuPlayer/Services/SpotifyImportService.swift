@@ -41,80 +41,50 @@ class SpotifyImportService {
         }
         
         var request = URLRequest(url: url)
-        // Use a generic mobile browser User-Agent to ensure we get a parseable version
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        // Use a generic Desktop User-Agent which is often more reliable for the embed page data
+        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", forHTTPHeaderField: "User-Agent")
         
         let (data, _) = try await URLSession.shared.data(for: request)
         guard let html = String(data: data, encoding: .utf8) else {
             throw NSError(domain: "SpotifyImport", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not decode response"])
         }
         
-        var tracks = parseTracksFromJSON(from: html)
-        if tracks.isEmpty {
-            tracks = parseTracksFromHTML(from: html)
-        }
-        
-        return tracks
+        return parseTracks(from: html)
     }
     
-    private func parseTracksFromJSON(from html: String) -> [SpotifyTrack] {
+    private func parseTracks(from html: String) -> [SpotifyTrack] {
         var tracks: [SpotifyTrack] = []
         
-        // Spotify often embeds data in a JSON blob. We search for patterns like:
-        // "name":"Song Name","artists":[{"name":"Artist Name"}]
-        // We use a flexible regex to catch variations in whitespace/escaping.
+        // Spotify's embed data is usually hidden in a large JSON string.
+        // We use several regex patterns to catch different ways the data might be structured.
         
-        let pattern = #""name"\s*:\s*"([^"]+)"\s*,\s*"artists"\s*:\s*\[\s*\{\s*"name"\s*:\s*"([^"]+)""#
-        
-        if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-            let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
-            for match in matches {
-                if let titleRange = Range(match.range(at: 1), in: html),
-                   let artistRange = Range(match.range(at: 2), in: html) {
-                    let title = String(html[titleRange]).decodingHTMLEntities()
-                    let artist = String(html[artistRange]).decodingHTMLEntities()
-                    
-                    if !tracks.contains(where: { $0.title == title && $0.artist == artist }) {
-                        tracks.append(SpotifyTrack(title: title, artist: artist))
-                    }
-                }
-            }
-        }
-        
-        return tracks
-    }
-    
-    private func parseTracksFromHTML(from html: String) -> [SpotifyTrack] {
-        var tracks: [SpotifyTrack] = []
-        
-        // If JSON parsing fails, look for HTML patterns.
-        // Spotify's embed often has track names in spans/divs with certain data attributes or classes.
-        
-        // Pattern: Search for anything that looks like "Title" followed by "Artist" in proximity
-        // This is a broad "catch-all" regex for structured lists
         let patterns = [
-            // Matches: <span ...>Title</span><span ...>Artist</span>
-            #"<span[^>]*>([^<]+)</span>\s*<span[^>]*>([^<]+)</span>"#,
-            // Matches: "title":"Title","artist":"Artist"
-            #""title"\s*:\s*"([^"]+)"\s*,\s*"artist"\s*:\s*"([^"]+)""#
+            // 1. Standard JSON track object: "name":"Title","artists":[{"name":"Artist"}]
+            #"\"name\"\s*:\s*\"([^\"]+)\"\s*,\s*\"artists\"\s*:\s*\[\s*\{\s*\"name\"\s*:\s*\"([^\"]+)\""#,
+            // 2. Simpler track/subtitle pattern: "title":"Title","subtitle":"Artist"
+            #"\"title\"\s*:\s*\"([^\"]+)\"\s*,\s*\"subtitle\"\s*:\s*\"([^\"]+)\""#,
+            // 3. Alternative: "name":"Title" ... "artistName":"Artist"
+            #"\"name\"\s*:\s*\"([^\"]+)\".*?\"artistName\"\s*:\s*\"([^\"]+)\""#
         ]
         
         for pattern in patterns {
-            if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) {
                 let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
                 for match in matches {
                     if let titleRange = Range(match.range(at: 1), in: html),
                        let artistRange = Range(match.range(at: 2), in: html) {
-                        let title = String(html[titleRange]).decodingHTMLEntities().trimmingCharacters(in: .whitespaces)
-                        let artist = String(html[artistRange]).decodingHTMLEntities().trimmingCharacters(in: .whitespaces)
+                        let title = String(html[titleRange]).decodingHTMLEntities()
+                        let artist = String(html[artistRange]).decodingHTMLEntities()
                         
-                        if title.count > 1 && artist.count > 1 && !tracks.contains(where: { $0.title == title }) {
+                        // Clean up escaping (e.g. \u0026)
+                        let cleanTitle = title.replacingOccurrences(of: "\\\\u([0-9a-fA-F]{4})", with: "", options: .regularExpression)
+                        
+                        if !tracks.contains(where: { $0.title == title }) && title.count > 1 && artist.count > 1 {
                             tracks.append(SpotifyTrack(title: title, artist: artist))
                         }
                     }
                 }
             }
-            if !tracks.isEmpty { break }
         }
         
         return tracks
@@ -138,16 +108,17 @@ class SpotifyImportService {
                 continue
             }
             
-            // 2. Try Fuzzy Match (Title contains or is contained by)
+            // 2. Try Fuzzy Match
             if let match = librarySongs.first(where: { song in
                 let lTitle = song.title.lowercased()
                 let lArtist = song.artist.lowercased()
                 
-                // Remove common suffixes like "(Remastered)", "- Single", etc for better matching
                 let cleanLTitle = lTitle.replacingOccurrences(of: "\\s*\\([^)]*\\)", with: "", options: .regularExpression)
                 let cleanSTitle = sTitle.replacingOccurrences(of: "\\s*\\([^)]*\\)", with: "", options: .regularExpression)
                 
-                let titleMatch = cleanLTitle.contains(cleanSTitle) || cleanSTitle.contains(cleanLTitle)
+                let titleMatch = cleanLTitle.contains(cleanSTitle) || cleanSTitle.contains(cleanLTitle) || 
+                                 lTitle.contains(sTitle) || sTitle.contains(lTitle)
+                
                 let artistMatch = lArtist.contains(sArtist) || sArtist.contains(lArtist)
                 
                 return titleMatch && artistMatch
@@ -162,8 +133,7 @@ class SpotifyImportService {
 
 private extension String {
     func decodingHTMLEntities() -> String {
-        // If it doesn't look like it has entities, skip the expensive conversion
-        if !self.contains("&") { return self }
+        if !self.contains("&") && !self.contains("\\u") { return self }
         
         guard let data = self.data(using: .utf8) else { return self }
         let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
@@ -171,7 +141,6 @@ private extension String {
             .characterEncoding: String.Encoding.utf8.rawValue
         ]
         
-        // Run on main thread if needed, though NSAttributedString is generally safe for simple HTML
         var decoded = self
         let semaphore = DispatchSemaphore(value: 0)
         DispatchQueue.main.async {
