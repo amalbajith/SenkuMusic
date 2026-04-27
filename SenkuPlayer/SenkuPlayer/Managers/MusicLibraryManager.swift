@@ -2,6 +2,7 @@
 //  MusicLibraryManager.swift
 //  SenkuPlayer
 //
+//
 
 import Foundation
 import Combine
@@ -766,10 +767,10 @@ class MusicLibraryManager: ObservableObject {
             
             do {
                 // Fetch current tracks from Spotify
-                let spotifyTracks = try await SpotifyImportService.shared.fetchPlaylistTracks(playlistID: spotifyID)
+                let info = try await SpotifyImportService.shared.fetchPlaylistInfo(playlistID: spotifyID)
                 
                 // Match with current library
-                let matchedIDs = SpotifyImportService.shared.matchTracksWithLibrary(spotifyTracks: spotifyTracks, librarySongs: self.songs)
+                let matchedIDs = SpotifyImportService.shared.matchTracksWithLibrary(spotifyTracks: info.tracks, librarySongs: self.songs)
                 
                 // Add missing songs
                 await MainActor.run {
