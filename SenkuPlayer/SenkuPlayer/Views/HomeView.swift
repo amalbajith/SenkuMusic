@@ -193,7 +193,7 @@ struct HomeView: View {
                     }
 
                     if let heroSong = heroSong {
-                        SongArtworkThumbnail(song: heroSong, size: 120, cornerRadius: 24)
+                        CachedArtworkView(song: heroSong, size: 120, cornerRadius: 24)
                             .shadow(color: .black.opacity(0.28), radius: 24, x: 0, y: 14)
                     }
                 }
@@ -295,7 +295,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(Array(featuredSongs.enumerated()), id: \.offset) { index, song in
+                    ForEach(Array(featuredSongs.enumerated()), id: \.element.id) { index, song in
                         SongShelfCard(song: song) {
                             let queue = recentSongs.isEmpty ? library.songs : recentSongs
                             let index = queue.firstIndex(of: song) ?? 0
@@ -314,7 +314,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(Array(featuredAlbums.enumerated()), id: \.offset) { index, album in
+                    ForEach(Array(featuredAlbums.enumerated()), id: \.element.id) { index, album in
                         NavigationLink(destination: AlbumDetailView(album: album)) {
                             HomeAlbumCard(album: album)
                         }
@@ -332,7 +332,7 @@ struct HomeView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
-                    ForEach(Array(featuredArtists.enumerated()), id: \.offset) { index, artist in
+                    ForEach(Array(featuredArtists.enumerated()), id: \.element.id) { index, artist in
                         NavigationLink(destination: ArtistDetailView(artist: artist)) {
                             HomeArtistCard(artist: artist)
                         }
@@ -349,14 +349,14 @@ struct HomeView: View {
             sectionHeader(title: "Favorite Mix", destination: AnyView(FavoritesDetailView()))
 
             VStack(spacing: 10) {
-                ForEach(Array(favoriteSongs.enumerated()), id: \.offset) { index, song in
+                ForEach(Array(favoriteSongs.enumerated()), id: \.element.id) { index, song in
                     Button {
                         let queue = favoriteSongs
                         let index = queue.firstIndex(of: song) ?? 0
                         player.playSong(song, in: queue, at: index)
                     } label: {
                         HStack(spacing: 12) {
-                            SongArtworkThumbnail(song: song, size: 52, cornerRadius: 10)
+                            CachedArtworkView(song: song, size: 52, cornerRadius: 10)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(song.title.normalizedForDisplay)
@@ -552,17 +552,6 @@ struct HomeView: View {
                 }
         }
     }
-
-    private var heroPrimaryButtonGradient: LinearGradient {
-        let startColor = heroSong == nil ? ModernTheme.mediumGray : backgroundHeroColor.opacity(0.95)
-        let endColor = heroSong == nil ? ModernTheme.darkGray : backgroundHeroColor.opacity(0.68)
-
-        return LinearGradient(
-            colors: [startColor, endColor],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-    }
 }
 
 struct HeroArtworkBackdrop: View {
@@ -614,8 +603,9 @@ struct HeroArtworkBackdrop: View {
                         .opacity(performanceProfile == .eco ? 0.3 : 0.7)
                 }
             }
-            .onAppear { updateImage() }
-            .onChange(of: song?.id) { _, _ in updateImage() }
+            .task(id: song?.id) {
+                updateImage()
+            }
         }
     }
     
@@ -623,6 +613,7 @@ struct HeroArtworkBackdrop: View {
         guard let song = song, song.id != lastSongId else { return }
         lastSongId = song.id
         
+        // PERF: Decoded once per song change, and kept until next change
         if let data = song.artworkData {
             Task.detached(priority: .userInitiated) {
                 if let platformImage = PlatformImage.fromData(data) {
@@ -644,11 +635,11 @@ private struct SongShelfCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
-                SongArtworkThumbnail(song: song, size: 160, cornerRadius: 16)
+                CachedArtworkView(song: song, size: 160, cornerRadius: 16)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(song.title.normalizedForDisplay)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(ModernTheme.textPrimary)
                         .lineLimit(2)
 
@@ -670,20 +661,12 @@ private struct HomeAlbumCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Group {
-                if let artworkData = album.displayArtworkData,
-                   let platformImage = PlatformImage.fromData(artworkData) {
-                    Image(platformImage: platformImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                if let firstSong = album.songs.first {
+                    CachedArtworkView(song: firstSong, size: 150, cornerRadius: 16)
                 } else {
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(
-                            LinearGradient(
-                                colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(ModernTheme.backgroundSecondary)
+                        .frame(width: 150, height: 150)
                         .overlay {
                             Image(systemName: "music.note")
                                 .font(.system(size: 42))
@@ -691,11 +674,9 @@ private struct HomeAlbumCard: View {
                         }
                 }
             }
-            .frame(width: 150, height: 150)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
 
             Text(album.name.normalizedForDisplay)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(ModernTheme.textPrimary)
                 .lineLimit(2)
 
@@ -715,16 +696,10 @@ private struct HomeArtistCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Group {
                 if let firstSong = artist.songs.first {
-                    SongArtworkThumbnail(song: firstSong, size: 124, cornerRadius: 62)
+                    CachedArtworkView(song: firstSong, size: 124, cornerRadius: 62)
                 } else {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(ModernTheme.backgroundSecondary)
                         .frame(width: 124, height: 124)
                         .overlay {
                             Text(artist.name.prefix(1).uppercased())
@@ -735,7 +710,7 @@ private struct HomeArtistCard: View {
             }
 
             Text(artist.name.normalizedForDisplay)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(ModernTheme.textPrimary)
                 .lineLimit(1)
 
@@ -745,63 +720,5 @@ private struct HomeArtistCard: View {
                 .lineLimit(1)
         }
         .frame(width: 124, alignment: .leading)
-    }
-}
-
-struct SongArtworkThumbnail: View {
-    let song: Song
-    let size: CGFloat
-    let cornerRadius: CGFloat
-    
-    @State private var decodedImage: PlatformImage? = nil
-    @State private var lastSongId: UUID? = nil
-
-    var body: some View {
-        ZStack {
-            if let image = decodedImage {
-                Image(platformImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray.opacity(0.5), ModernTheme.darkGray.opacity(0.5)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: size * 0.28))
-                            .foregroundColor(ModernTheme.textTertiary.opacity(0.5))
-                    }
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .stroke(ModernTheme.borderSubtle, lineWidth: 1)
-        }
-        .onAppear { decodeImage() }
-        .onChange(of: song.id) { _, _ in decodeImage() }
-    }
-    
-    private func decodeImage() {
-        guard song.id != lastSongId else { return }
-        lastSongId = song.id
-        
-        if let data = song.artworkData {
-            Task.detached(priority: .userInitiated) {
-                if let platformImage = PlatformImage.fromData(data) {
-                    await MainActor.run {
-                        self.decodedImage = platformImage
-                    }
-                }
-            }
-        } else {
-            self.decodedImage = nil
-        }
     }
 }

@@ -13,17 +13,15 @@ import Combine
 final class ArtworkCacheManager: ObservableObject {
     static let shared = ArtworkCacheManager()
     
-    @Published private var _cacheToken = UUID() // Dummy to ensure protocol compliance
-    
     private let cache = NSCache<NSString, UIImage>()
     private var inProgressTasks: [NSString: Task<UIImage?, Never>] = [:]
     
     private init() {
-        cache.countLimit = 200 // Cache up to 200 decoded images
-        cache.totalCostLimit = 1024 * 1024 * 100 // 100MB limit
+        cache.countLimit = 300 // Increased cache limit
+        cache.totalCostLimit = 1024 * 1024 * 150 // 150MB limit
     }
     
-    func getImage(for song: Song, size: CGFloat = 100) async -> UIImage? {
+    func getImage(for song: Song, size: CGFloat) async -> UIImage? {
         let cacheKey = "\(song.id.uuidString)-\(Int(size))" as NSString
         
         // 1. Check Memory Cache
@@ -42,12 +40,19 @@ final class ArtworkCacheManager: ObservableObject {
             
             // Decode in background thread
             return await Task.detached(priority: .userInitiated) {
-                guard let image = UIImage(data: data) else { return nil }
+                // High-performance decoding using ImageSource (more memory efficient than UIImage(data:))
+                guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
+                      let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+                    return nil
+                }
                 
-                // Downsample for performance if needed
-                let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+                let originalImage = UIImage(cgImage: cgImage)
+                
+                // Downsample to target size to save VRAM
+                let targetSize = CGSize(width: size, height: size)
+                let renderer = UIGraphicsImageRenderer(size: targetSize)
                 let downsampled = renderer.image { _ in
-                    image.draw(in: CGRect(x: 0, y: 0, width: size, height: size))
+                    originalImage.draw(in: CGRect(origin: .zero, size: targetSize))
                 }
                 
                 return downsampled
@@ -70,10 +75,18 @@ final class ArtworkCacheManager: ObservableObject {
     }
 }
 
+/// A highly optimized view for displaying song artwork with caching and background decoding.
 struct CachedArtworkView: View {
     let song: Song
     let size: CGFloat
-    @State private var image: UIImage?
+    var cornerRadius: CGFloat? = nil
+    
+    @State private var image: UIImage? = nil
+    @State private var currentSongId: UUID? = nil
+    
+    private var effectiveCornerRadius: CGFloat {
+        cornerRadius ?? size * 0.15
+    }
     
     var body: some View {
         ZStack {
@@ -85,15 +98,19 @@ struct CachedArtworkView: View {
                 ModernTheme.backgroundSecondary
                     .overlay(
                         Image(systemName: "music.note")
-                            .font(.system(size: size * 0.4))
-                            .foregroundColor(ModernTheme.lightGray)
+                            .font(.system(size: size * 0.35))
+                            .foregroundColor(ModernTheme.textTertiary.opacity(0.5))
                     )
             }
         }
         .frame(width: size, height: size)
-        .cornerRadius(size * 0.15)
+        .clipShape(RoundedRectangle(cornerRadius: effectiveCornerRadius))
         .task(id: song.id) {
-            image = await ArtworkCacheManager.shared.getImage(for: song, size: size)
+            // Only update if song changed or image is nil
+            if currentSongId != song.id {
+                currentSongId = song.id
+                image = await ArtworkCacheManager.shared.getImage(for: song, size: size)
+            }
         }
     }
 }

@@ -5,16 +5,20 @@
 //
 
 import SwiftUI
+import Combine
 
 struct SongsListView: View {
     @StateObject private var player = AudioPlayerManager.shared
     let songs: [Song]
     let searchText: String
+    
     @State private var selectedSongs: Set<UUID> = []
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
     @AppStorage("libraryDisplayMode") private var displayMode: String = "List"
 
+    // PERF: Cache filtered songs to avoid O(N) filter in body on every 100ms timer tick
+    @State private var filteredSongs: [Song] = []
     
     var body: some View {
         ZStack {
@@ -24,123 +28,10 @@ struct SongsListView: View {
             VStack(spacing: 0) {
                 if songs.isEmpty {
                     EmptyLibraryView()
+                } else if filteredSongs.isEmpty && !searchText.isEmpty {
+                    noResultsView
                 } else {
-                    let filteredSongs = songs.filter { song in
-                        searchText.isEmpty ||
-                        song.title.localizedCaseInsensitiveContains(searchText) ||
-                        song.artist.localizedCaseInsensitiveContains(searchText) ||
-                        song.album.localizedCaseInsensitiveContains(searchText)
-                    }
-                    
-                    let activeSongs = filteredSongs // For easier reference
-                    
-                    if filteredSongs.isEmpty && !searchText.isEmpty {
-                        VStack(spacing: 20) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 40)) // Icon size
-                                .foregroundColor(ModernTheme.mediumGray)
-                            Text("No matches for \"\(searchText)\"")
-                                .foregroundColor(ModernTheme.lightGray)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        if displayMode == "List" {
-                            ScrollView(showsIndicators: false) {
-                                LazyVStack(spacing: 8) {
-                                    ForEach(Array(activeSongs.enumerated()), id: \.offset) { index, song in
-                                        SimpleSongRow(
-                                            song: song,
-                                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
-                                            isSelected: selectedSongs.contains(song.id),
-                                            isSelectionMode: isSelectionMode
-                                        )
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            if isSelectionMode {
-                                                toggleSelection(song.id)
-                                            } else {
-                                                playSong(song, in: activeSongs)
-                                            }
-                                        }
-                                        .contextMenu {
-                                            Button {
-                                                player.playNext(song: song)
-                                            } label: {
-                                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
-                                            }
-                                            
-                                            Button {
-                                                player.playMoreLikeThis(song: song, from: MusicLibraryManager.shared.songs)
-                                            } label: {
-                                                Label("More Like This", systemImage: "wand.and.stars")
-                                            }
-                                            
-                                            Button {
-                                                FavoritesManager.shared.toggleFavorite(song: song)
-                                            } label: {
-                                                let isFav = FavoritesManager.shared.isFavorite(song: song)
-                                                Label(isFav ? "Remove from Favorites" : "Favorite",
-                                                      systemImage: isFav ? "heart.slash.fill" : "heart")
-                                            }
-                                            
-                                            Button {
-                                                selectedSongs = [song.id]
-                                                showingPlaylistPicker = true
-                                            } label: {
-                                                Label("Add to a Playlist...", systemImage: "music.note.list")
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, ModernTheme.screenPadding)
-                                .padding(.top, 12)
-                                .padding(.bottom, 100)
-                            }
-                        } else {
-                            ScrollView {
-                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 16)], spacing: 24) {
-                                    ForEach(Array(filteredSongs.enumerated()), id: \.offset) { index, song in
-                                        GridSongCard(
-                                            song: song,
-                                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
-                                            isSelected: selectedSongs.contains(song.id),
-                                            isSelectionMode: isSelectionMode
-                                        )
-                                        .onTapGesture {
-                                            if isSelectionMode {
-                                                toggleSelection(song.id)
-                                            } else {
-                                                playSong(song, in: filteredSongs)
-                                            }
-                                        }
-                                        .contextMenu {
-                                            Button {
-                                                player.playNext(song: song)
-                                            } label: {
-                                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
-                                            }
-                                            
-                                            Button {
-                                                FavoritesManager.shared.toggleFavorite(song: song)
-                                            } label: {
-                                                let isFav = FavoritesManager.shared.isFavorite(song: song)
-                                                Label(isFav ? "Remove from Favorites" : "Favorite",
-                                                      systemImage: isFav ? "heart.slash.fill" : "heart")
-                                            }
-                                            
-                                            Button {
-                                                selectedSongs = [song.id]
-                                                showingPlaylistPicker = true
-                                            } label: {
-                                                Label("Add to a Playlist...", systemImage: "music.note.list")
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding()
-                            }
-                        }
-                    }
+                    contentView
                 }
                 
                 if isSelectionMode {
@@ -151,6 +42,9 @@ struct SongsListView: View {
                 Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
             }
         }
+        .onAppear { updateFilteredSongs() }
+        .onChange(of: searchText) { _, _ in updateFilteredSongs() }
+        .onChange(of: songs.count) { _, _ in updateFilteredSongs() }
         .toolbar {
             if !songs.isEmpty {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -181,10 +75,119 @@ struct SongsListView: View {
         }) {
             PlaylistPickerView(songIDs: Array(selectedSongs))
         }
-
         .preferredColorScheme(.dark)
     }
+    
+    private var noResultsView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40))
+                .foregroundColor(ModernTheme.mediumGray)
+            Text("No matches for \"\(searchText)\"")
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    @ViewBuilder
+    private var contentView: some View {
+        if displayMode == "List" {
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(filteredSongs.enumerated()), id: \.element.id) { index, song in
+                        SimpleSongRow(
+                            song: song,
+                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                            isSelected: selectedSongs.contains(song.id),
+                            isSelectionMode: isSelectionMode
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isSelectionMode {
+                                toggleSelection(song.id)
+                            } else {
+                                playSong(song, in: filteredSongs)
+                            }
+                        }
+                        .contextMenu {
+                            rowContextMenu(for: song)
+                        }
+                    }
+                }
+                .padding(.horizontal, ModernTheme.screenPadding)
+                .padding(.top, 12)
+                .padding(.bottom, 100)
+            }
+        } else {
+            ScrollView(showsIndicators: false) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 16)], spacing: 24) {
+                    ForEach(filteredSongs) { song in
+                        GridSongCard(
+                            song: song,
+                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                            isSelected: selectedSongs.contains(song.id),
+                            isSelectionMode: isSelectionMode
+                        )
+                        .onTapGesture {
+                            if isSelectionMode {
+                                toggleSelection(song.id)
+                            } else {
+                                playSong(song, in: filteredSongs)
+                            }
+                        }
+                        .contextMenu {
+                            rowContextMenu(for: song)
+                        }
+                    }
+                }
+                .padding()
+                .padding(.bottom, 100)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func rowContextMenu(for song: Song) -> some View {
+        Button {
+            player.playNext(song: song)
+        } label: {
+            Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+        }
+        
+        Button {
+            player.playMoreLikeThis(song: song, from: MusicLibraryManager.shared.songs)
+        } label: {
+            Label("More Like This", systemImage: "wand.and.stars")
+        }
+        
+        Button {
+            FavoritesManager.shared.toggleFavorite(song: song)
+        } label: {
+            let isFav = FavoritesManager.shared.isFavorite(song: song)
+            Label(isFav ? "Remove from Favorites" : "Favorite",
+                  systemImage: isFav ? "heart.slash.fill" : "heart")
+        }
+        
+        Button {
+            selectedSongs = [song.id]
+            showingPlaylistPicker = true
+        } label: {
+            Label("Add to a Playlist...", systemImage: "music.note.list")
+        }
+    }
 
+    private func updateFilteredSongs() {
+        if searchText.isEmpty {
+            filteredSongs = songs
+        } else {
+            let query = searchText.lowercased()
+            filteredSongs = songs.filter {
+                $0.title.lowercased().contains(query) ||
+                $0.artist.lowercased().contains(query) ||
+                $0.album.lowercased().contains(query)
+            }
+        }
+    }
 
     private var selectionToolbar: some View {
         HStack {
@@ -224,7 +227,7 @@ struct SongsListView: View {
     }
 }
 
-// MARK: - Simple Song Row
+// MARK: - Simple Song Row (Optimized)
 struct SimpleSongRow: View {
     let song: Song
     let isPlaying: Bool
@@ -241,28 +244,24 @@ struct SimpleSongRow: View {
                     .font(.title3)
             }
             
-            // Artwork
+            // PERF: CachedArtworkView uses background decoding
             CachedArtworkView(song: song, size: 50)
             
-            // Song Info
             VStack(alignment: .leading, spacing: 4) {
                 Text((devShowFileExtensions ? song.url.lastPathComponent : song.title).normalizedForDisplay)
                     .font(ModernTheme.body())
                     .foregroundColor(isPlaying ? ModernTheme.accentYellow : .white)
                     .lineLimit(1)
-                    .truncationMode(.tail)
                 
                 Text(song.artist.normalizedForDisplay)
                     .font(ModernTheme.caption())
                     .foregroundColor(ModernTheme.textSecondary)
                     .lineLimit(1)
-                    .truncationMode(.tail)
             }
             .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
             Spacer()
             
-            // Playing Indicator / Duration
             if isPlaying && !isSelectionMode {
                 Image(systemName: "waveform")
                     .foregroundColor(ModernTheme.accentYellow)
@@ -273,17 +272,20 @@ struct SimpleSongRow: View {
                     .foregroundColor(ModernTheme.textTertiary)
             }
         }
-        .padding(.vertical, ModernTheme.miniPadding)
-        .padding(.horizontal, ModernTheme.itemPadding)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(isPlaying ? ModernTheme.backgroundSecondary.opacity(0.88) : Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isPlaying ? Color.white.opacity(0.12) : Color.clear, lineWidth: 1)
-                )
-                .shadow(color: isPlaying ? Color.black.opacity(0.18) : .clear, radius: 10, x: 0, y: 4)
+                .overlay {
+                    if isPlaying {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    }
+                }
         )
+        // PERF: Avoid shadows on all items, only for playing items if needed
+        .shadow(color: isPlaying ? Color.black.opacity(0.2) : .clear, radius: 8, x: 0, y: 4)
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -293,31 +295,7 @@ struct SimpleSongRow: View {
     }
 }
 
-// MARK: - Empty Library View
-struct EmptyLibraryView: View {
-    var body: some View {
-        ZStack {
-            ModernTheme.backgroundPrimary.ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                Image(systemName: "music.note.list")
-                    .font(.system(size: 60))
-                    .foregroundColor(ModernTheme.lightGray)
-                
-                Text("No Songs")
-                    .font(ModernTheme.title())
-                    .foregroundColor(.white)
-                
-                Text("Add music files to get started")
-                    .font(ModernTheme.body())
-                    .foregroundColor(ModernTheme.lightGray)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-}
-
-// MARK: - Grid Song Card
+// MARK: - Grid Song Card (Optimized)
 struct GridSongCard: View {
     let song: Song
     let isPlaying: Bool
@@ -327,25 +305,10 @@ struct GridSongCard: View {
     @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .topTrailing) {
-                if let artworkData = song.artworkData,
-                   let platformImage = PlatformImage.fromData(artworkData) {
-                    Image(platformImage: platformImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 140, height: 140)
-                        .cornerRadius(12)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(ModernTheme.backgroundSecondary)
-                        .frame(width: 140, height: 140)
-                        .overlay {
-                            Image(systemName: "music.note")
-                                .font(.largeTitle)
-                                .foregroundColor(ModernTheme.lightGray)
-                        }
-                }
+                // PERF: Unified with CachedArtworkView
+                CachedArtworkView(song: song, size: 140, cornerRadius: 12)
                 
                 if isSelectionMode {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -364,11 +327,11 @@ struct GridSongCard: View {
                         .padding(8)
                 }
             }
-            .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.3) : .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.3) : .black.opacity(0.15), radius: 8, x: 0, y: 4)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text((devShowFileExtensions ? song.url.lastPathComponent : song.title).normalizedForDisplay)
-                    .font(ModernTheme.caption().bold())
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(isPlaying ? ModernTheme.accentYellow : .white)
                     .lineLimit(1)
                 
@@ -379,5 +342,24 @@ struct GridSongCard: View {
             }
         }
         .frame(width: 140)
+    }
+}
+
+struct EmptyLibraryView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "music.note.list")
+                .font(.system(size: 60))
+                .foregroundColor(ModernTheme.lightGray)
+            
+            Text("No Songs")
+                .font(ModernTheme.title())
+                .foregroundColor(.white)
+            
+            Text("Add music files to get started")
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.lightGray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
