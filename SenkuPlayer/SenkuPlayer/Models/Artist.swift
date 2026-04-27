@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 struct Artist: Identifiable, Hashable {
     let id: UUID

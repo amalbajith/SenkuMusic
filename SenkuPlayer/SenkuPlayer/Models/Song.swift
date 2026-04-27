@@ -18,6 +18,9 @@ struct Song: Identifiable, Codable, Equatable {
     var year: Int?
     var trackNumber: Int?
     var discNumber: Int?
+    var energy: Float?
+    var plainLyrics: String?
+    var syncedLyrics: String?
     
     // Playback Stats
     var lastPlayedDate: Date?
@@ -31,10 +34,10 @@ struct Song: Identifiable, Codable, Equatable {
     // Coding/Decoding will ignore artworkData if we use CodingKeys
     
     enum CodingKeys: String, CodingKey {
-        case id, url, title, artist, album, albumArtist, duration, genre, year, trackNumber, discNumber, hasArtwork, lastPlayedDate, playCount
+        case id, url, title, artist, album, albumArtist, duration, genre, year, trackNumber, discNumber, energy, plainLyrics, syncedLyrics, hasArtwork, lastPlayedDate, playCount
     }
     
-    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil, hasArtwork: Bool = false, lastPlayedDate: Date? = nil, playCount: Int = 0) {
+    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil, energy: Float? = nil, plainLyrics: String? = nil, syncedLyrics: String? = nil, hasArtwork: Bool = false, lastPlayedDate: Date? = nil, playCount: Int = 0) {
         self.id = id
         self.url = url
         self.title = title
@@ -46,6 +49,9 @@ struct Song: Identifiable, Codable, Equatable {
         self.year = year
         self.trackNumber = trackNumber
         self.discNumber = discNumber
+        self.energy = energy
+        self.plainLyrics = plainLyrics
+        self.syncedLyrics = syncedLyrics
         self.hasArtwork = hasArtwork
         self.lastPlayedDate = lastPlayedDate
         self.playCount = playCount
@@ -165,6 +171,7 @@ extension Song {
             year: year,
             trackNumber: trackNumber,
             discNumber: discNumber,
+            energy: nil,
             hasArtwork: artworkData != nil
         )
         

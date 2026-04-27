@@ -1,5 +1,6 @@
 
 import Foundation
+import Combine
 import AVFoundation
 
 struct EqualizerBand: Codable, Equatable, Identifiable {

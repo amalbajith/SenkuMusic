@@ -6,11 +6,8 @@
 //
 
 import SwiftUI
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
 import UIKit
-#endif
+
 
 struct ModernTheme {
     // MARK: - Colors (Refined Neon Graphite Palette)
@@ -115,11 +112,9 @@ struct ModernTheme {
     }
 }
 
-#if os(macOS)
-typealias PlatformViewRepresentable = NSViewRepresentable
-#else
+
 typealias PlatformViewRepresentable = UIViewRepresentable
-#endif
+
 
 // MARK: - Color Extension for Hex
 

@@ -12,6 +12,7 @@ struct SongsListView: View {
     @State private var selectedSongs: Set<UUID> = []
     @State private var isSelectionMode = false
     @State private var showingPlaylistPicker = false
+    @AppStorage("libraryDisplayMode") private var displayMode: String = "List"
 
     
     var body: some View {
@@ -30,6 +31,8 @@ struct SongsListView: View {
                         song.album.localizedCaseInsensitiveContains(searchText)
                     }
                     
+                    let activeSongs = filteredSongs // For easier reference
+                    
                     if filteredSongs.isEmpty && !searchText.isEmpty {
                         VStack(spacing: 20) {
                             Image(systemName: "magnifyingglass")
@@ -40,51 +43,102 @@ struct SongsListView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        List {
-                            ForEach(filteredSongs) { song in
-                                SimpleSongRow(
-                                    song: song,
-                                    isPlaying: player.currentSong?.id == song.id && player.isPlaying,
-                                    isSelected: selectedSongs.contains(song.id),
-                                    isSelectionMode: isSelectionMode
-                                )
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    if isSelectionMode {
-                                        toggleSelection(song.id)
-                                    } else {
-                                        playSong(song, in: filteredSongs)
+                        if displayMode == "List" {
+                            ScrollView(showsIndicators: false) {
+                                LazyVStack(spacing: 8) {
+                                    ForEach(activeSongs) { song in
+                                        SimpleSongRow(
+                                            song: song,
+                                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                                            isSelected: selectedSongs.contains(song.id),
+                                            isSelectionMode: isSelectionMode
+                                        )
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            if isSelectionMode {
+                                                toggleSelection(song.id)
+                                            } else {
+                                                playSong(song, in: activeSongs)
+                                            }
+                                        }
+                                        .contextMenu {
+                                            Button {
+                                                player.playNext(song: song)
+                                            } label: {
+                                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                                            }
+                                            
+                                            Button {
+                                                player.playMoreLikeThis(song: song, from: MusicLibraryManager.shared.songs)
+                                            } label: {
+                                                Label("More Like This", systemImage: "wand.and.stars")
+                                            }
+                                            
+                                            Button {
+                                                FavoritesManager.shared.toggleFavorite(song: song)
+                                            } label: {
+                                                let isFav = FavoritesManager.shared.isFavorite(song: song)
+                                                Label(isFav ? "Remove from Favorites" : "Favorite",
+                                                      systemImage: isFav ? "heart.slash.fill" : "heart")
+                                            }
+                                            
+                                            Button {
+                                                selectedSongs = [song.id]
+                                                showingPlaylistPicker = true
+                                            } label: {
+                                                Label("Add to a Playlist...", systemImage: "music.note.list")
+                                            }
+                                        }
                                     }
                                 }
-                                .contextMenu {
-                                    Button {
-                                        player.playNext(song: song)
-                                    } label: {
-                                        Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
-                                    }
-                                    
-                                    Button {
-                                        FavoritesManager.shared.toggleFavorite(song: song)
-                                    } label: {
-                                        let isFav = FavoritesManager.shared.isFavorite(song: song)
-                                        Label(isFav ? "Remove from Favorites" : "Favorite",
-                                              systemImage: isFav ? "heart.slash.fill" : "heart")
-                                    }
-                                    
-                                    Button {
-                                        selectedSongs = [song.id]
-                                        showingPlaylistPicker = true
-                                    } label: {
-                                        Label("Add to a Playlist...", systemImage: "music.note.list")
+                                .padding(.horizontal, ModernTheme.screenPadding)
+                                .padding(.top, 12)
+                                .padding(.bottom, 100)
+                            }
+                        } else {
+                            ScrollView {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 16)], spacing: 24) {
+                                    ForEach(filteredSongs) { song in
+                                        GridSongCard(
+                                            song: song,
+                                            isPlaying: player.currentSong?.id == song.id && player.isPlaying,
+                                            isSelected: selectedSongs.contains(song.id),
+                                            isSelectionMode: isSelectionMode
+                                        )
+                                        .onTapGesture {
+                                            if isSelectionMode {
+                                                toggleSelection(song.id)
+                                            } else {
+                                                playSong(song, in: filteredSongs)
+                                            }
+                                        }
+                                        .contextMenu {
+                                            Button {
+                                                player.playNext(song: song)
+                                            } label: {
+                                                Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                                            }
+                                            
+                                            Button {
+                                                FavoritesManager.shared.toggleFavorite(song: song)
+                                            } label: {
+                                                let isFav = FavoritesManager.shared.isFavorite(song: song)
+                                                Label(isFav ? "Remove from Favorites" : "Favorite",
+                                                      systemImage: isFav ? "heart.slash.fill" : "heart")
+                                            }
+                                            
+                                            Button {
+                                                selectedSongs = [song.id]
+                                                showingPlaylistPicker = true
+                                            } label: {
+                                                Label("Add to a Playlist...", systemImage: "music.note.list")
+                                            }
+                                        }
                                     }
                                 }
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 4, leading: ModernTheme.cardPadding, bottom: 4, trailing: ModernTheme.cardPadding))
+                                .padding()
                             }
                         }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
                     }
                 }
                 
@@ -92,19 +146,27 @@ struct SongsListView: View {
                     selectionToolbar
                 }
             }
-            #if os(iOS)
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
             }
-            #endif
         }
         .toolbar {
             if !songs.isEmpty {
-                ToolbarItem(placement: .automatic) {
-                    Button(isSelectionMode ? "Done" : "Select") {
-                        isSelectionMode.toggle()
-                        if !isSelectionMode {
-                            selectedSongs.removeAll()
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 16) {
+                        Button {
+                            withAnimation {
+                                displayMode = displayMode == "List" ? "Grid" : "List"
+                            }
+                        } label: {
+                            Image(systemName: displayMode == "List" ? "square.grid.2x2" : "list.bullet")
+                        }
+                        
+                        Button(isSelectionMode ? "Done" : "Select") {
+                            isSelectionMode.toggle()
+                            if !isSelectionMode {
+                                selectedSongs.removeAll()
+                            }
                         }
                     }
                 }
@@ -143,9 +205,7 @@ struct SongsListView: View {
         .overlay(alignment: .top) {
             Divider().background(ModernTheme.borderSubtle)
         }
-        #if os(iOS)
         .padding(.bottom, player.currentSong != nil ? 80 : 0)
-        #endif
     }
     
     private func toggleSelection(_ id: UUID) {
@@ -181,22 +241,7 @@ struct SimpleSongRow: View {
             }
             
             // Artwork
-            if let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 50)
-                    .cornerRadius(8)
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(ModernTheme.backgroundSecondary)
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .foregroundColor(ModernTheme.lightGray)
-                    }
-            }
+            CachedArtworkView(song: song, size: 50)
             
             // Song Info
             VStack(alignment: .leading, spacing: 4) {
@@ -231,12 +276,12 @@ struct SimpleSongRow: View {
         .padding(.horizontal, ModernTheme.itemPadding)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isPlaying ? ModernTheme.backgroundSecondary : Color.clear)
+                .fill(isPlaying ? ModernTheme.backgroundSecondary.opacity(0.88) : Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(isPlaying ? ModernTheme.accentYellow.opacity(0.8) : Color.clear, lineWidth: 1.5)
+                        .stroke(isPlaying ? Color.white.opacity(0.12) : Color.clear, lineWidth: 1)
                 )
-                .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.2) : .clear, radius: 12, x: 0, y: 4)
+                .shadow(color: isPlaying ? Color.black.opacity(0.18) : .clear, radius: 10, x: 0, y: 4)
         )
     }
     
@@ -268,6 +313,71 @@ struct EmptyLibraryView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+}
+
+// MARK: - Grid Song Card
+struct GridSongCard: View {
+    let song: Song
+    let isPlaying: Bool
+    let isSelected: Bool
+    let isSelectionMode: Bool
+    
+    @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                if let artworkData = song.artworkData,
+                   let platformImage = PlatformImage.fromData(artworkData) {
+                    Image(platformImage: platformImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 140)
+                        .cornerRadius(12)
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(ModernTheme.backgroundSecondary)
+                        .frame(width: 140, height: 140)
+                        .overlay {
+                            Image(systemName: "music.note")
+                                .font(.largeTitle)
+                                .foregroundColor(ModernTheme.lightGray)
+                        }
+                }
+                
+                if isSelectionMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isSelected ? ModernTheme.accentYellow : .white)
+                        .font(.title3)
+                        .background(Circle().fill(Color.black.opacity(0.4)))
+                        .padding(8)
+                }
+                
+                if isPlaying && !isSelectionMode {
+                    Image(systemName: "waveform")
+                        .foregroundColor(ModernTheme.accentYellow)
+                        .symbolEffect(.variableColor.iterative)
+                        .padding(8)
+                        .background(Circle().fill(Color.black.opacity(0.6)))
+                        .padding(8)
+                }
+            }
+            .shadow(color: isPlaying ? ModernTheme.accentYellow.opacity(0.3) : .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text((devShowFileExtensions ? song.url.lastPathComponent : song.title).normalizedForDisplay)
+                    .font(ModernTheme.caption().bold())
+                    .foregroundColor(isPlaying ? ModernTheme.accentYellow : .white)
+                    .lineLimit(1)
+                
+                Text(song.artist.normalizedForDisplay)
+                    .font(ModernTheme.caption())
+                    .foregroundColor(ModernTheme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(width: 140)
     }
 }
 

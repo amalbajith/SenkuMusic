@@ -6,9 +6,7 @@
 //
 
 import SwiftUI
-#if os(iOS)
 import UIKit
-#endif
 
 struct MiniPlayerView: View {
     @StateObject private var player = AudioPlayerManager.shared
@@ -17,9 +15,9 @@ struct MiniPlayerView: View {
     
     private func updateBackgroundColor() {
         guard let song = player.currentSong else { return }
-        DispatchQueue.global(qos: .userInitiated).async {
-            let color = DominantColorExtractor.shared.extractDominantColor(for: song)
-            DispatchQueue.main.async {
+        Task {
+            let color = await DominantColorExtractor.shared.extractDominantColor(for: song)
+            await MainActor.run {
                 withAnimation(.easeInOut(duration: 0.4)) {
                     self.backgroundColor = color
                 }
@@ -100,6 +98,26 @@ struct MiniPlayerView: View {
                                 Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
                             }
                     }
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            dragOffset = 300
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                            player.stop()
+                            dragOffset = 0
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(ModernTheme.textSecondary)
+                            .frame(width: 28, height: 28)
+                            .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
+                            .overlay {
+                                Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                            }
+                    }
                 }
                 .padding(.horizontal, ModernTheme.itemPadding)
                 .padding(.vertical, ModernTheme.miniPadding)
@@ -124,7 +142,6 @@ struct MiniPlayerView: View {
             .frame(height: 64)
             .padding(.horizontal, ModernTheme.cardPadding)
             .offset(y: dragOffset)
-            #if os(iOS)
             .onTapGesture {
                 player.isNowPlayingPresented = true
             }
@@ -152,7 +169,6 @@ struct MiniPlayerView: View {
                         }
                     }
             )
-            #endif
         }
     }
 }

@@ -127,6 +127,14 @@ class MusicLibraryManager: ObservableObject {
             
             // Automatically fetch metadata for songs without artwork
             await self.autoFetchMetadata(for: foundSongs)
+            
+            // Automatically analyze audio energy
+            await self.autoFetchEnergy(for: foundSongs)
+            
+            // Automatically fetch lyrics in the background
+            Task.detached(priority: .background) {
+                await self.autoFetchLyrics(for: foundSongs)
+            }
         }
     }
     
@@ -170,11 +178,15 @@ class MusicLibraryManager: ObservableObject {
                 copiedURLs.append(destURL)
             }
             
+            #if DEBUG
             print("📦 Extracted \(copiedURLs.count) audio files from zip")
+            #endif
             return copiedURLs
             
         } catch {
+            #if DEBUG
             print("❌ Zip extraction failed: \(error.localizedDescription)")
+            #endif
             return []
         }
     }
@@ -212,6 +224,14 @@ class MusicLibraryManager: ObservableObject {
             if !song.hasArtwork {
                 await self.autoFetchMetadata(for: [song])
             }
+            if song.energy == nil {
+                await self.autoFetchEnergy(for: [song])
+            }
+            if song.syncedLyrics == nil && song.plainLyrics == nil {
+                Task.detached(priority: .background) {
+                    await self.autoFetchLyrics(for: [song])
+                }
+            }
         }
     }
 
@@ -222,6 +242,11 @@ class MusicLibraryManager: ObservableObject {
         var parsedSongs: [(song: Song, artwork: Data?)] = []
         parsedSongs.reserveCapacity(urls.count)
         for url in urls {
+            // VULN-02: enforce the same audio extension allowlist used by importFiles
+            guard Self.allowedAudioExtensions.contains(url.pathExtension.lowercased()) else {
+                try? FileManager.default.removeItem(at: url) // clean up non-audio file written by sync
+                continue
+            }
             if let parsed = await Song.fromURL(url) {
                 parsedSongs.append((parsed.0, parsed.1))
             }
@@ -254,6 +279,10 @@ class MusicLibraryManager: ObservableObject {
 
             Task {
                 await self.autoFetchMetadata(for: importedNeedingMetadata)
+                await self.autoFetchEnergy(for: importedNeedingMetadata)
+                Task.detached(priority: .background) {
+                    await self.autoFetchLyrics(for: importedNeedingMetadata)
+                }
             }
         }
     }
@@ -265,7 +294,9 @@ class MusicLibraryManager: ObservableObject {
         
         guard !songsNeedingArtwork.isEmpty else { return }
         
+        #if DEBUG
         print("🎨 Auto-fetching metadata for \(songsNeedingArtwork.count) songs...")
+        #endif
         
         let results = await MetadataFetcher.shared.fetchMetadataForSongs(songsNeedingArtwork)
         
@@ -303,9 +334,169 @@ class MusicLibraryManager: ObservableObject {
                 self.saveSongs()
                 self.organizeLibrary()
                 self.objectWillChange.send()
+                #if DEBUG
                 print("✅ Auto-fetched metadata for \(updateCount) songs")
+                #endif
             }
         }
+    }
+    
+    // MARK: - Auto Energy Fetching
+    private func autoFetchEnergy(for songs: [Song]) async {
+        let songsNeedingEnergy = songs.filter { $0.energy == nil }
+        guard !songsNeedingEnergy.isEmpty else { return }
+        
+        #if DEBUG
+        print("⚡️ Auto-analyzing energy for \(songsNeedingEnergy.count) songs...")
+        #endif
+        
+        var updateCount = 0
+        for song in songsNeedingEnergy {
+            if let energy = await AudioAnalyzer.shared.analyzeEnergy(for: song.url) {
+                await MainActor.run {
+                    if let index = self.songs.firstIndex(where: { $0.id == song.id }) {
+                        self.songs[index].energy = energy
+                        updateCount += 1
+                    }
+                }
+            }
+        }
+        
+        if updateCount > 0 {
+            await MainActor.run {
+                self.saveSongs()
+                self.generateSmartPlaylists()
+                #if DEBUG
+                print("✅ Analyzed energy for \(updateCount) songs")
+                #endif
+            }
+        }
+    }
+    
+    // MARK: - Smart Playlists
+    func generateSmartPlaylists() {
+        let highEnergySongs = songs.filter { ($0.energy ?? 0) >= 0.4 }.map { $0.id }
+        let chillSongs = songs.filter { ($0.energy ?? 1.0) <= 0.35 }.map { $0.id }
+        
+        updateOrCreateSmartPlaylist(name: "High Energy Mix ⚡️", songIDs: highEnergySongs)
+        updateOrCreateSmartPlaylist(name: "Chill Vibes 🧘‍♂️", songIDs: chillSongs)
+    }
+    
+    private func updateOrCreateSmartPlaylist(name: String, songIDs: [UUID]) {
+        guard !songIDs.isEmpty else { return }
+        
+        if let index = playlists.firstIndex(where: { $0.name == name }) {
+            playlists[index].songIDs = songIDs
+            playlists[index].modifiedDate = Date()
+        } else {
+            let playlist = Playlist(name: name, songIDs: songIDs)
+            playlists.append(playlist)
+        }
+        savePlaylists()
+    }
+    
+    // MARK: - Lyrics
+    func fetchLyricsIfNeeded(for song: Song) async {
+        guard song.syncedLyrics == nil && song.plainLyrics == nil else { return }
+        
+        do {
+            if let response = try await LyricsFetcher.shared.fetchLyrics(for: song) {
+                await MainActor.run {
+                    if let index = self.songs.firstIndex(where: { $0.id == song.id }) {
+                        self.songs[index].plainLyrics = response.plainLyrics
+                        self.songs[index].syncedLyrics = response.syncedLyrics
+                        self.saveSongs()
+                        
+                        // Keep current playing song in sync if it's the one we just fetched
+                        if AudioPlayerManager.shared.currentSong?.id == song.id {
+                            AudioPlayerManager.shared.currentSong?.plainLyrics = response.plainLyrics
+                            AudioPlayerManager.shared.currentSong?.syncedLyrics = response.syncedLyrics
+                        }
+                    }
+                }
+            }
+        } catch {
+            print("Failed to fetch lyrics: \(error)")
+        }
+    }
+    
+    // MARK: - Batch Lyrics Auto-Fetcher
+    /// Fetches lyrics for a batch of songs with a concurrency cap so we don't
+    /// hammer LRCLIB with 100+ simultaneous requests. Saves every 10 songs.
+    func autoFetchLyrics(for songs: [Song]) async {
+        let songsNeedingLyrics = songs.filter { $0.syncedLyrics == nil && $0.plainLyrics == nil }
+        guard !songsNeedingLyrics.isEmpty else { return }
+        
+        #if DEBUG
+        print("🎵 Starting lyrics fetch for \(songsNeedingLyrics.count) songs")
+        #endif
+        
+        // Max 3 concurrent requests to be respectful to LRCLIB
+        var saveCounter = 0
+        var songIterator = songsNeedingLyrics.makeIterator()
+        let maxConcurrency = 3
+        
+        await withTaskGroup(of: (UUID, String?, String?).self) { group in
+            var activeCount = 0
+            
+            // Seed initial concurrent slots
+            while activeCount < maxConcurrency, let song = songIterator.next() {
+                let songCopy = song
+                group.addTask(priority: .background) {
+                    do {
+                        if let response = try await LyricsFetcher.shared.fetchLyrics(for: songCopy) {
+                            return (songCopy.id, response.plainLyrics, response.syncedLyrics)
+                        }
+                    } catch { /* silently skip on network error */ }
+                    return (songCopy.id, nil, nil)
+                }
+                activeCount += 1
+            }
+            
+            // As tasks complete, save result and enqueue next
+            for await (songID, plain, synced) in group {
+                if plain != nil || synced != nil {
+                    await MainActor.run {
+                        if let index = self.songs.firstIndex(where: { $0.id == songID }) {
+                            self.songs[index].plainLyrics = plain
+                            self.songs[index].syncedLyrics = synced
+                        }
+                        if AudioPlayerManager.shared.currentSong?.id == songID {
+                            AudioPlayerManager.shared.currentSong?.plainLyrics = plain
+                            AudioPlayerManager.shared.currentSong?.syncedLyrics = synced
+                        }
+                    }
+                    saveCounter += 1
+                    // Batch-save every 10 songs to reduce disk write pressure
+                    if saveCounter % 10 == 0 {
+                        await MainActor.run { self.saveSongs() }
+                    }
+                }
+                
+                // 300ms throttle between requests to be polite to the API
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                
+                // Enqueue next song if available
+                if let next = songIterator.next() {
+                    let nextCopy = next
+                    group.addTask(priority: .background) {
+                        do {
+                            if let response = try await LyricsFetcher.shared.fetchLyrics(for: nextCopy) {
+                                return (nextCopy.id, response.plainLyrics, response.syncedLyrics)
+                            }
+                        } catch { /* silently skip */ }
+                        return (nextCopy.id, nil, nil)
+                    }
+                }
+            }
+        }
+        
+        // Final save for any remaining unsaved results
+        await MainActor.run { self.saveSongs() }
+        
+        #if DEBUG
+        print("✅ Lyrics fetch complete for \(songsNeedingLyrics.count) songs")
+        #endif
     }
     
     func getMusicDirectory() -> URL {
@@ -359,10 +550,16 @@ class MusicLibraryManager: ObservableObject {
         var artistDict: [String: Artist] = [:]
         
         for song in songs {
-            // Album organization
-            let albumKey = "\(song.album)_\(song.artist)"
+            // Album organization — songs with no album tag group by artist
+            let effectiveAlbum = song.album.isEmpty || song.album == "Unknown Album"
+                ? "Unknown Album"
+                : song.album
+            let albumArtist = song.album.isEmpty || song.album == "Unknown Album"
+                ? song.artist   // group by artist when no album tag
+                : song.artist
+            let albumKey = "\(effectiveAlbum)_\(albumArtist)"
             if albumDict[albumKey] == nil {
-                albumDict[albumKey] = Album(name: song.album, artist: song.artist, songs: [], artworkData: nil)
+                albumDict[albumKey] = Album(name: effectiveAlbum, artist: albumArtist, songs: [], artworkData: nil)
             }
             albumDict[albumKey]?.songs.append(song)
             
@@ -397,6 +594,29 @@ class MusicLibraryManager: ObservableObject {
         }
     }
     
+    // MARK: - Backup Merge
+    @MainActor
+    func mergeSongs(_ imported: [Song]) {
+        for song in imported {
+            let isDuplicate = songs.contains {
+                $0.title == song.title && $0.artist == song.artist && $0.album == song.album
+            }
+            if !isDuplicate { songs.append(song) }
+        }
+        organizeLibrary()
+        saveSongs()
+    }
+    
+    @MainActor
+    func mergePlaylists(_ imported: [Playlist]) {
+        for playlist in imported {
+            if !playlists.contains(where: { $0.name == playlist.name }) {
+                playlists.append(playlist)
+            }
+        }
+        savePlaylists()
+    }
+    
     func loadSavedData() {
         Task(priority: .userInitiated) {
             guard let url = songsFileURL, let data = try? Data(contentsOf: url) else { return }
@@ -413,9 +633,29 @@ class MusicLibraryManager: ObservableObject {
                 await MainActor.run {
                     self.songs = decoded
                     self.organizeLibrary()
+                    self.generateSmartPlaylists()
+                }
+                
+                // Start a silent background sweep for missing metadata/lyrics/energy
+                // for the entire library to catch any items that were missed previously.
+                Task.detached(priority: .background) {
+                    await self.performMaintenanceSweep()
                 }
             }
         }
+    }
+
+    private func performMaintenanceSweep() async {
+        let allSongs = await MainActor.run { self.songs }
+        
+        // 1. Fetch missing artwork/metadata
+        await autoFetchMetadata(for: allSongs)
+        
+        // 2. Fetch missing lyrics
+        await autoFetchLyrics(for: allSongs)
+        
+        // 3. Analyze missing audio energy
+        await autoFetchEnergy(for: allSongs)
     }
     
     // MARK: - Helper Methods

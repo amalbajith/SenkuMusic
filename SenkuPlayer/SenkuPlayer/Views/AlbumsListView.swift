@@ -51,7 +51,7 @@ struct AlbumGridItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
-            if let artworkData = album.artworkData,
+            if let artworkData = album.displayArtworkData,
                let platformImage = PlatformImage.fromData(artworkData) {
                 Image(platformImage: platformImage)
                     .resizable()
@@ -62,7 +62,7 @@ struct AlbumGridItem: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -102,7 +102,7 @@ struct AlbumDetailView: View {
                 // Header
                 VStack(spacing: 16) {
                     // Artwork
-                    if let artworkData = album.artworkData,
+                    if let artworkData = album.displayArtworkData,
                        let platformImage = PlatformImage.fromData(artworkData) {
                         Image(platformImage: platformImage)
                             .resizable()
@@ -114,7 +114,7 @@ struct AlbumDetailView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                                    colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -154,13 +154,9 @@ struct AlbumDetailView: View {
                         }
                     } label: {
                         Label("Play", systemImage: "play.fill")
-                            .font(.headline)
-                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
                     }
+                    .pillButtonStyle()
                     .padding(.horizontal)
                 }
                 .padding(.vertical, 24)
@@ -190,9 +186,7 @@ struct AlbumDetailView: View {
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
         }
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
     }
 }
 
@@ -214,7 +208,7 @@ struct AlbumSongRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(song.title.normalizedForDisplay)
                     .font(.body)
-                    .foregroundColor(isPlaying ? .blue : .primary)
+                    .foregroundColor(isPlaying ? ModernTheme.accentYellow : ModernTheme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 
@@ -233,7 +227,7 @@ struct AlbumSongRow: View {
             // Playing Indicator or Duration
             if isPlaying {
                 Image(systemName: "waveform")
-                    .foregroundColor(.blue)
+                    .foregroundColor(ModernTheme.accentYellow)
                     .symbolEffect(.variableColor.iterative)
             } else {
                 Menu {

@@ -2,31 +2,32 @@
 //  SettingsView.swift
 //  SenkuPlayer
 //
-//  Created by Amal on 30/12/25.
-//
 
 import SwiftUI
-#if os(iOS)
 import UIKit
-#endif
 
 struct SettingsView: View {
     @StateObject private var library = MusicLibraryManager.shared
-    @StateObject private var player = AudioPlayerManager.shared
+    @StateObject private var player  = AudioPlayerManager.shared
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
+    @Environment(\.openURL)  private var openURL
+
     @State private var showingClearLibraryAlert = false
     @AppStorage("crossfadeDuration") private var crossfadeDuration: Double = 0.0
-    @AppStorage("gaplessPlayback") private var gaplessPlayback: Bool = true
+    @AppStorage("gaplessPlayback")   private var gaplessPlayback: Bool     = true
+    @AppStorage("performanceProfile") private var performanceProfile: PerformanceProfile = .balanced
+    @AppStorage("volumeNormalization") private var volumeNormalization: Bool = true
 
-    // Developer Settings
-    @AppStorage("devShowFileExtensions") private var devShowFileExtensions = false
-    @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
-    @AppStorage("devEnableDebugLogging") private var devEnableDebugLogging = false
-    @AppStorage("devForceVibrantBackground") private var devForceVibrantBackground = false
+    @AppStorage("devBypassArtworkCache")   private var devBypassArtworkCache   = false
+    @AppStorage("devSimulateNetworkDelay") private var devSimulateNetworkDelay = false
+    @AppStorage("devShowAudioMetrics")     private var devShowAudioMetrics     = false
 
-    @State private var versionTapCount = 0
+    @State private var versionTapCount      = 0
     @State private var showDeveloperSection = false
+    @State private var isExporting          = false
+    @State private var showingRestorePicker = false
+    @State private var exportURL: URL?      = nil
+    @State private var showingShareSheet    = false
 
     private var canUnlockDeveloperSection: Bool {
         #if DEBUG
@@ -35,376 +36,386 @@ struct SettingsView: View {
         return false
         #endif
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                ModernTheme.backgroundPrimary
-                    .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 28) {
-                        headerSection
-                        audioSection
-                        librarySection
-                        
-                        if showDeveloperSection {
-                            developerSection
+                ModernTheme.backgroundPrimary.ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 36) {
+
+                        // Title
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Settings")
+                                .font(ModernTheme.heroTitle())
+                                .foregroundColor(ModernTheme.textPrimary)
+                            Text("Playback & preferences")
+                                .font(ModernTheme.body())
+                                .foregroundColor(ModernTheme.textSecondary)
                         }
-                        
-                        aboutSection
+
+                        // Library stats — airy grid, no card border
+                        HStack(spacing: 0) {
+                            statItem(value: "\(library.songs.count)",     label: "Songs")
+                            statItem(value: "\(library.albums.count)",    label: "Albums")
+                            statItem(value: "\(library.artists.count)",   label: "Artists")
+                            statItem(value: "\(library.playlists.count)", label: "Playlists")
+                        }
+
+                        // Audio & Performance
+                        group(title: "Audio & Performance") {
+                            NavigationLink(destination: EqualizerView()) {
+                                row(icon: "slider.vertical.3", label: "Equalizer", chevron: true)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            rowDivider()
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "bolt.batteryblock.fill")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(ModernTheme.textSecondary)
+                                        .frame(width: 24)
+                                    Text("Performance Mode")
+                                        .font(ModernTheme.body())
+                                        .foregroundColor(ModernTheme.textPrimary)
+                                    Spacer()
+                                }
+                                
+                                Picker("Performance Profile", selection: $performanceProfile) {
+                                    ForEach(PerformanceProfile.allCases) { profile in
+                                        Text(profile.rawValue).tag(profile)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                
+                                Text(performanceProfile.description)
+                                    .font(ModernTheme.caption())
+                                    .foregroundColor(ModernTheme.textSecondary)
+                                    .padding(.top, 4)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+
+                            rowDivider()
+                            toggleRow(icon: "arrow.triangle.merge", label: "Gapless Playback", binding: $gaplessPlayback)
+                            rowDivider()
+                            toggleRow(icon: "waveform.path.ecg", label: "Volume Normalisation", binding: $volumeNormalization)
+                            rowDivider()
+
+                            // Crossfade slider inline
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: "arrow.left.and.right.square.fill")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(ModernTheme.textSecondary)
+                                    Text("Crossfade")
+                                        .font(ModernTheme.body())
+                                        .foregroundColor(ModernTheme.textPrimary)
+                                    Spacer()
+                                    Text(crossfadeDuration == 0 ? "Off" : String(format: "%.0fs", crossfadeDuration))
+                                        .font(ModernTheme.caption())
+                                        .foregroundColor(ModernTheme.textSecondary)
+                                        .monospacedDigit()
+                                }
+                                Slider(value: $crossfadeDuration, in: 0...12, step: 1)
+                                    .tint(ModernTheme.accentYellow)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                        }
+
+                        // Backup & Restore
+                        group(title: "Backup & Restore") {
+                            Button {
+                                exportBackup()
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "arrow.up.doc.fill")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(ModernTheme.accentYellow)
+                                        .frame(width: 24)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Export Library")
+                                            .font(ModernTheme.body())
+                                            .foregroundColor(ModernTheme.textPrimary)
+                                        Text("Save .senkubackup to Files")
+                                            .font(ModernTheme.caption())
+                                            .foregroundColor(ModernTheme.textSecondary)
+                                    }
+                                    Spacer()
+                                    if isExporting {
+                                        ProgressView().tint(ModernTheme.accentYellow)
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+                            .disabled(isExporting || library.songs.isEmpty)
+                            
+                            rowDivider()
+                            
+                            Button {
+                                showingRestorePicker = true
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "arrow.down.doc.fill")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(ModernTheme.textSecondary)
+                                        .frame(width: 24)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Restore Library")
+                                            .font(ModernTheme.body())
+                                            .foregroundColor(ModernTheme.textPrimary)
+                                        Text("Import a .senkubackup file")
+                                            .font(ModernTheme.caption())
+                                            .foregroundColor(ModernTheme.textSecondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+                        }
+
+                        // Library actions
+                        group(title: "Library") {
+                            Button { showingClearLibraryAlert = true } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(ModernTheme.danger)
+                                        .frame(width: 24)
+                                    Text("Clear Library")
+                                        .font(ModernTheme.body())
+                                        .foregroundColor(ModernTheme.danger)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                            }
+                        }
+
+
+                        // Developer (hidden)
+                        if showDeveloperSection {
+                            group(title: "Developer") {
+                                infoRow(label: "Developer", value: "Amal B Ajith")
+                                rowDivider()
+                                Button {
+                                    if let url = URL(string: "https://github.com/iamalbajith"),
+                                       isSafeURL(url) { openURL(url) }
+                                } label: {
+                                    row(icon: "link", label: "GitHub", chevron: true)
+                                }
+                                .buttonStyle(.plain)
+                                rowDivider()
+                                toggleRow(icon: "photo.badge.arrow.down",  label: "Bypass Artwork Cache", binding: $devBypassArtworkCache)
+                                rowDivider()
+                                toggleRow(icon: "network",     label: "Simulate Network Delay", binding: $devSimulateNetworkDelay)
+                                rowDivider()
+                                toggleRow(icon: "waveform.path.ecg",  label: "Show Audio Metrics Overlay", binding: $devShowAudioMetrics)
+                                rowDivider()
+                                Button {
+                                    devBypassArtworkCache   = false
+                                    devSimulateNetworkDelay = false
+                                    devShowAudioMetrics     = false
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "arrow.counterclockwise")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(ModernTheme.danger)
+                                            .frame(width: 24)
+                                        Text("Reset Dev Settings")
+                                            .font(ModernTheme.body())
+                                            .foregroundColor(ModernTheme.danger)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                }
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+
+                        // About
+                        group(title: "About") {
+                            Button { handleVersionTap() } label: {
+                                infoRow(label: "Version", value: "1.8.5")
+                            }
+                            .buttonStyle(.plain)
+                            rowDivider()
+                            infoRow(label: "Build", value: "32")
+                        }
                     }
-                    .padding(.bottom, player.currentSong != nil ? 100 : 20)
+                    .padding(.horizontal, ModernTheme.screenPadding)
+                    .padding(.top, 20)
+                    .padding(.bottom, player.currentSong != nil ? 200 : 80)
                 }
             }
             .preferredColorScheme(.dark)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(ModernTheme.lightGray)
-                    }
-                }
-            }
         }
         .alert("Clear Library", isPresented: $showingClearLibraryAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Clear All", role: .destructive) {
-                clearLibrary()
-            }
+            Button("Clear All", role: .destructive) { library.deleteAllSongs() }
         } message: {
             Text("This will remove all songs from your library. This action cannot be undone.")
         }
-        .background(ModernTheme.backgroundPrimary)
+        .sheet(isPresented: $showingShareSheet) {
+            if let url = exportURL {
+                ShareSheet(items: [url])
+            }
+        }
+        .sheet(isPresented: $showingRestorePicker) {
+            BackupRestorePickerView { url in
+                Task {
+                    try? await BackupManager.shared.restoreBackup(from: url)
+                }
+            }
+        }
         .preferredColorScheme(.dark)
     }
     
-    // MARK: - Header
-    
-    private var headerSection: some View {
-        Text("Settings")
-            .font(ModernTheme.heroTitle())
-            .foregroundColor(.white)
-            .fontWeight(.bold)
-            .padding(.horizontal, ModernTheme.screenPadding)
-            .padding(.top, ModernTheme.screenPadding)
-    }
-    
-    // MARK: - Audio & Playback (single card)
-    
-    private var audioSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Audio & Playback")
-                .sectionHeaderStyle()
-                .padding(.horizontal, ModernTheme.screenPadding)
-            
-            VStack(spacing: 0) {
-                // Equalizer
-                NavigationLink(destination: EqualizerView()) {
-                    groupedRow(icon: "slider.vertical.3", title: "Equalizer", showChevron: true)
+    // MARK: - Backup Helpers
+    private func exportBackup() {
+        isExporting = true
+        Task.detached(priority: .userInitiated) {
+            do {
+                let url = try await BackupManager.shared.createBackup()
+                await MainActor.run {
+                    exportURL = url
+                    isExporting = false
+                    showingShareSheet = true
                 }
-                .buttonStyle(.plain)
-                
-                groupedDivider()
-                
-                // Gapless Playback
-                groupedToggleRow(icon: "arrow.triangle.merge", title: "Gapless Playback", isOn: $gaplessPlayback)
-                
-                groupedDivider()
-                
-                // Crossfade
-                VStack(spacing: 10) {
-                    HStack(spacing: 12) {
-                        settingsIcon("arrow.left.and.right.square.fill")
-                        
-                        Text("Crossfade")
-                            .font(ModernTheme.body())
-                            .foregroundColor(.white)
-                        
-                        Spacer()
-                        
-                        Text(crossfadeDuration == 0 ? "Off" : String(format: "%.0fs", crossfadeDuration))
-                            .font(ModernTheme.body())
-                            .foregroundColor(ModernTheme.lightGray)
-                    }
-                    
-                    Slider(value: $crossfadeDuration, in: 0...12, step: 1)
-                        .tint(ModernTheme.accentYellow)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-            }
-            .cardBackground()
-            .padding(.horizontal, ModernTheme.screenPadding)
-        }
-    }
-    
-    // MARK: - Library (stats + actions in one section)
-    
-    private var librarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Library")
-                .sectionHeaderStyle()
-                .padding(.horizontal, ModernTheme.screenPadding)
-            
-            // Stats row - compact horizontal
-            HStack(spacing: 0) {
-                statItem(value: "\(library.songs.count)", label: "Songs")
-                statDivider()
-                statItem(value: "\(library.albums.count)", label: "Albums")
-                statDivider()
-                statItem(value: "\(library.artists.count)", label: "Artists")
-                statDivider()
-                statItem(value: "\(library.playlists.count)", label: "Playlists")
-            }
-            .padding(.vertical, 16)
-            .cardBackground()
-            .padding(.horizontal, ModernTheme.screenPadding)
-            
-            // Clear library action
-            Button {
-                showingClearLibraryAlert = true
-            } label: {
-                HStack(spacing: 12) {
-                    settingsIcon("trash", color: .red)
-                    
-                    Text("Clear Library")
-                        .font(ModernTheme.body())
-                        .foregroundColor(.red)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .cardBackground()
-            }
-            .padding(.horizontal, ModernTheme.screenPadding)
-        }
-    }
-    
-    // MARK: - Developer (hidden section)
-    
-    private var developerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Developer")
-                .sectionHeaderStyle()
-                .padding(.horizontal, ModernTheme.screenPadding)
-            
-            VStack(spacing: 0) {
-                // Info
-                groupedInfoRow(title: "Developer", value: "Amal B Ajith")
-                
-                groupedDivider()
-                
-                // GitHub
-                Button {
-                    if let url = URL(string: "https://github.com/iamalbajith"), isSafeExternalURL(url) {
-                        openURL(url)
-                    }
-                } label: {
-                    groupedRow(icon: "link", title: "GitHub", showChevron: true)
-                }
-                .buttonStyle(.plain)
-                
-                groupedDivider()
-                
-                // Debug header
-                Text("DEBUG")
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundColor(ModernTheme.lightGray)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 14)
-                    .padding(.bottom, 6)
-                
-                groupedToggleRow(icon: "doc.text", title: "Show File Extensions", isOn: $devShowFileExtensions)
-                groupedDivider()
-                groupedToggleRow(icon: "photo", title: "Disable Artwork Animation", isOn: $devDisableArtworkAnimation)
-                groupedDivider()
-                groupedToggleRow(icon: "terminal", title: "Console Logging", isOn: $devEnableDebugLogging)
-                groupedDivider()
-                groupedToggleRow(icon: "sparkles", title: "Force Vibrant UI", isOn: $devForceVibrantBackground)
-                
-                groupedDivider()
-                
-                // Reset
-                Button {
-                    devShowFileExtensions = false
-                    devDisableArtworkAnimation = false
-                    devEnableDebugLogging = false
-                    devForceVibrantBackground = false
-                } label: {
-                    HStack(spacing: 12) {
-                        settingsIcon("arrow.counterclockwise", color: .red)
-                        
-                        Text("Reset Dev Settings")
-                            .font(ModernTheme.body())
-                            .foregroundColor(.red)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-            }
-            .cardBackground()
-            .padding(.horizontal, ModernTheme.screenPadding)
-        }
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-    
-    // MARK: - About
-    
-    private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("About")
-                .sectionHeaderStyle()
-                .padding(.horizontal, ModernTheme.screenPadding)
-            
-            VStack(spacing: 0) {
-                Button {
-                    handleVersionTap()
-                } label: {
-                    groupedInfoRow(title: "Version", value: "1.8.5")
-                }
-                .buttonStyle(.plain)
-                
-                groupedDivider()
-                
-                groupedInfoRow(title: "Build", value: "32")
-            }
-            .cardBackground()
-            .padding(.horizontal, ModernTheme.screenPadding)
-        }
-    }
-    
-    // MARK: - Shared Components
-    
-    private func settingsIcon(_ name: String, color: Color = .white) -> some View {
-        Image(systemName: name)
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(color)
-            .frame(width: 32, height: 32)
-            .background(ModernTheme.mediumGray)
-            .cornerRadius(8)
-    }
-    
-    private func groupedRow(icon: String, title: String, showChevron: Bool = false) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon)
-            
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(ModernTheme.lightGray.opacity(0.6))
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-    }
-    
-    private func groupedToggleRow(icon: String, title: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
-            settingsIcon(icon)
-            
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Toggle("", isOn: isOn)
-                .labelsHidden()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-    
-    private func groupedInfoRow(title: String, value: String) -> some View {
-        HStack {
-            Text(title)
-                .font(ModernTheme.body())
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            Text(value)
-                .font(ModernTheme.body())
-                .foregroundColor(ModernTheme.lightGray)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-    }
-    
-    private func groupedDivider() -> some View {
-        Divider()
-            .background(ModernTheme.lightGray.opacity(0.15))
-            .padding(.leading, 60)
-    }
-    
-    private func statItem(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(ModernTheme.lightGray)
-                .textCase(.uppercase)
-        }
-        .frame(maxWidth: .infinity)
-    }
-    
-    private func statDivider() -> some View {
-        Rectangle()
-            .fill(ModernTheme.lightGray.opacity(0.15))
-            .frame(width: 1, height: 30)
-    }
-    
-    // MARK: - Logic
-    
-    private func clearLibrary() {
-        library.deleteAllSongs()
-    }
-    
-    private func handleVersionTap() {
-        versionTapCount += 1
-        
-        #if os(iOS)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        #endif
-        
-        if versionTapCount >= 7 && !showDeveloperSection && canUnlockDeveloperSection {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                showDeveloperSection = true
-            }
-            versionTapCount = 0
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            if versionTapCount < 7 {
-                versionTapCount = 0
+            } catch {
+                await MainActor.run { isExporting = false }
+                print("❌ Backup failed: \(error)")
             }
         }
     }
 
-    private func isSafeExternalURL(_ url: URL) -> Bool {
+
+    // MARK: - Section group
+
+    @ViewBuilder
+    private func group<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(ModernTheme.headline())
+                .foregroundColor(ModernTheme.textPrimary)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(ModernTheme.backgroundSecondary.opacity(0.85))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(ModernTheme.borderSubtle, lineWidth: 1)
+            }
+        }
+    }
+
+    // MARK: - Row helpers
+
+    private func row(icon: String, label: String, chevron: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundColor(ModernTheme.textSecondary)
+                .frame(width: 24)
+            Text(label)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.textPrimary)
+            Spacer()
+            if chevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(ModernTheme.textSecondary.opacity(0.5))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private func toggleRow(icon: String, label: String, binding: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundColor(ModernTheme.textSecondary)
+                .frame(width: 24)
+            Text(label)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.textPrimary)
+            Spacer()
+            Toggle("", isOn: binding).labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.textPrimary)
+            Spacer()
+            Text(value)
+                .font(ModernTheme.body())
+                .foregroundColor(ModernTheme.textSecondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private func rowDivider() -> some View {
+        Divider()
+            .background(ModernTheme.borderSubtle)
+            .padding(.leading, 52)
+    }
+
+    // MARK: - Stats
+
+    private func statItem(value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(ModernTheme.textPrimary)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(ModernTheme.textSecondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Logic
+
+    private func handleVersionTap() {
+        versionTapCount += 1
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if versionTapCount >= 7 && !showDeveloperSection && canUnlockDeveloperSection {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) { showDeveloperSection = true }
+            versionTapCount = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if versionTapCount < 7 { versionTapCount = 0 }
+        }
+    }
+
+    // VULN-05 note: this guard is sound for the hardcoded GitHub URL below.
+    // Do NOT reuse this function for user-supplied URLs without additional validation —
+    // hasSuffix alone is bypassable (e.g. "evil-github.com"). If user input is ever
+    // involved, use a strict allowlist of exact hostnames instead.
+    private func isSafeURL(_ url: URL) -> Bool {
         guard url.scheme == "https", let host = url.host else { return false }
         return host == "github.com" || host.hasSuffix(".github.com")
     }
 }
 
-#Preview {
-    SettingsView()
-}
+#Preview { SettingsView() }

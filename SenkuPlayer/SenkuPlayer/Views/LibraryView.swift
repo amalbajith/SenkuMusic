@@ -12,6 +12,7 @@ struct LibraryView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @State private var searchText = ""
     @State private var showingFilePicker = false
+    @State private var showingSearch = false
     
     var body: some View {
         NavigationStack {
@@ -23,9 +24,19 @@ struct LibraryView: View {
                     // Header Section
                     headerSection
                     
-                    // Search Bar Section
-                    searchBarSection
-                        .padding(.top, 16)
+                    // Search Bar Section (Conditional)
+                    if showingSearch {
+                        searchBarSection
+                            .padding(.top, 16)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    
+                    // Mood Selector
+                    if !library.songs.isEmpty {
+                        moodSection
+                            .padding(.top, 20)
+                            .padding(.bottom, 8)
+                    }
                     
                     // Content
                     Group {
@@ -59,31 +70,53 @@ struct LibraryView: View {
             
             Spacer()
             
-            HStack(spacing: 16) {
+            HStack(spacing: 12) {
+                // Search Toggle
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        showingSearch.toggle()
+                    }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(showingSearch ? ModernTheme.accentYellow : ModernTheme.textPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(ModernTheme.backgroundSecondary)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(showingSearch ? ModernTheme.accentYellow.opacity(0.3) : ModernTheme.borderSubtle, lineWidth: 1)
+                        }
+                }
+
+                // AI AutoMix button
                 Button {
                     AudioPlayerManager.shared.startAutoMix(songs: library.songs)
                 } label: {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 18))
-                        .foregroundColor(.black) // Text contrast on bright accent
-                        .frame(width: 44, height: 44)
-                        .background(
-                            LinearGradient(
-                                colors: [ModernTheme.accentYellow, ModernTheme.accentYellowSoft],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(Circle())
-                        .shadow(color: ModernTheme.accentYellow.opacity(0.4), radius: 8, x: 0, y: 0)
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("AutoMix")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(ModernTheme.textPrimary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(ModernTheme.backgroundSecondary)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(ModernTheme.borderSubtle, lineWidth: 1)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                 }
                 
+                // Import Music button
                 Button {
                     showingFilePicker = true
                 } label: {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(ModernTheme.textTertiary)
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(ModernTheme.textSecondary)
                 }
             }
         }
@@ -124,6 +157,38 @@ struct LibraryView: View {
         }
         .cornerRadius(12)
         .padding(.horizontal, 24)
+    }
+    
+    // MARK: - Mood Section
+    private var moodSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Mood.allCases) { mood in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        AudioPlayerManager.shared.startMoodMix(mood: mood, from: library.songs)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: mood.icon)
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(mood.rawValue)
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                        .background(ModernTheme.accentYellow)
+                        .clipShape(Capsule())
+                        .shadow(color: ModernTheme.accentYellow.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+        }
     }
 
     private var emptyState: some View {
@@ -216,7 +281,7 @@ struct SongRowView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } else {
-                        Color.gray.opacity(0.3)
+                        ModernTheme.borderSubtle
                             .overlay(Image(systemName: "music.note").font(.caption))
                     }
                     
@@ -280,8 +345,14 @@ struct SongRowView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isCurrentSong ? Color.white.opacity(0.05) : Color.clear)
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isCurrentSong ? ModernTheme.backgroundSecondary.opacity(0.88) : Color.clear)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isCurrentSong ? Color.white.opacity(0.12) : Color.clear, lineWidth: 1)
+                    }
+            )
         }
         .buttonStyle(.plain)
     }

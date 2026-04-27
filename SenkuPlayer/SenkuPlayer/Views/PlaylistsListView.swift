@@ -63,9 +63,7 @@ struct PlaylistsListView: View {
                 }
             }
             .navigationTitle("Playlists")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
@@ -145,9 +143,7 @@ struct CreatePlaylistSheet: View {
             }
             .padding(.top, 40)
             .navigationTitle("New Playlist")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -179,9 +175,7 @@ struct CreatePlaylistSheet: View {
         let trimmed = playlistName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         
-        #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
         
         library.createPlaylist(name: trimmed)
         isPresented = false
@@ -285,9 +279,7 @@ struct FavoritesDetailView: View {
                 
                 if !songs.isEmpty {
                     Button {
-                        #if os(iOS)
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        #endif
                         if let firstSong = songs.first {
                             player.playSong(firstSong, in: songs, at: 0)
                         }
@@ -351,9 +343,7 @@ struct FavoritesDetailView: View {
                 }
             }
         }
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
     }
 }
 
@@ -404,10 +394,10 @@ struct PlaylistArtwork: View {
     var body: some View {
         if songs.isEmpty {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.gray.opacity(0.15))
+                .fill(ModernTheme.backgroundSecondary)
                 .overlay {
                     Image(systemName: "music.note.list")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ModernTheme.textTertiary)
                 }
         } else if songs.count == 1 {
             singleArtwork(songs[0])
@@ -469,7 +459,7 @@ struct PlaylistArtwork: View {
                     .clipped()
             } else {
                 Rectangle()
-                    .fill(Color.gray.opacity(0.15))
+                    .fill(ModernTheme.backgroundSecondary)
                     .frame(width: size, height: size)
             }
         }
@@ -511,9 +501,7 @@ struct PlaylistDetailView: View {
                 HStack(spacing: 12) {
                     if !songs.isEmpty {
                         Button {
-                            #if os(iOS)
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            #endif
                             if let firstSong = songs.first {
                                 player.playSong(firstSong, in: songs, at: 0)
                             }
@@ -547,7 +535,7 @@ struct PlaylistDetailView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "music.note.list")
                         .font(.system(size: 50))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ModernTheme.textTertiary)
                     
                     Text("No Songs")
                         .font(.title3)
@@ -581,15 +569,11 @@ struct PlaylistDetailView: View {
                 }
             }
         }
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
         .toolbar {
-            #if os(iOS)
             ToolbarItem(placement: .navigationBarTrailing) {
                 EditButton()
             }
-            #endif
         }
         .sheet(isPresented: $showingAddSongs) {
             AddSongsToPlaylistView(playlistID: playlistID)
@@ -712,9 +696,7 @@ struct AddSongsToPlaylistView: View {
             }
             .searchable(text: $searchText, prompt: "Search songs")
             .navigationTitle("Add Songs")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -737,9 +719,7 @@ struct AddSongsToPlaylistView: View {
     }
     
     private func toggleSelection(_ id: UUID) {
-        #if os(iOS)
         UISelectionFeedbackGenerator().selectionChanged()
-        #endif
         if selectedSongIDs.contains(id) {
             selectedSongIDs.remove(id)
         } else {
@@ -749,9 +729,7 @@ struct AddSongsToPlaylistView: View {
     
     private func addSelectedSongs() {
         guard let playlist = playlist else { return }
-        #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
         library.addSongsToPlaylist(Array(selectedSongIDs), playlist: playlist)
         dismiss()
     }

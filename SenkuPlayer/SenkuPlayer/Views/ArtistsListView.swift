@@ -60,7 +60,7 @@ struct ArtistRow: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -119,7 +119,7 @@ struct ArtistDetailView: View {
                         Circle()
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                                    colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
@@ -150,13 +150,9 @@ struct ArtistDetailView: View {
                         }
                     } label: {
                         Label("Play All", systemImage: "play.fill")
-                            .font(.headline)
-                            .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
                     }
+                    .pillButtonStyle()
                     .padding(.horizontal)
                 }
                 .padding(.top, 24)
@@ -217,9 +213,7 @@ struct ArtistDetailView: View {
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
         }
-        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        #endif
     }
 }
 
@@ -229,7 +223,7 @@ struct ArtistAlbumItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
-            if let artworkData = album.artworkData,
+            if let artworkData = album.displayArtworkData,
                let platformImage = PlatformImage.fromData(artworkData) {
                 Image(platformImage: platformImage)
                     .resizable()
@@ -241,7 +235,7 @@ struct ArtistAlbumItem: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(
                         LinearGradient(
-                            colors: [Color.blue.opacity(0.6), Color.purple.opacity(0.6)],
+                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

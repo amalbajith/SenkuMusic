@@ -2,35 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_senku-share._tcp</string>
+		<string>_senku-share._udp</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>Aura</string>
-	<key>UIUserInterfaceStyle</key>
-	<string>Dark</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Aura needs access to the local network to share songs with nearby friends.</string>
-	<key>NSBonjourServices</key>
-	<array>
-	
-		<string>_senku-share._tcp</string>
-		<string>_senku-share._udp</string>
-	</array>
-	<key>UISupportedInterfaceOrientations</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
 	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 </dict>
 </plist>

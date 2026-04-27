@@ -22,7 +22,7 @@ struct PlaylistPickerView: View {
                     showingCreatePlaylist = true
                 } label: {
                     Label("New Playlist", systemImage: "plus.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(ModernTheme.accentYellow)
                 }
                 
                 // Existing Playlists
@@ -52,9 +52,7 @@ struct PlaylistPickerView: View {
                 }
             }
             .navigationTitle("Add to Playlist")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button("Cancel") {

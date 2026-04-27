@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 struct Album: Identifiable, Hashable {
     let id: UUID
@@ -28,6 +29,14 @@ struct Album: Identifiable, Hashable {
     
     var year: Int? {
         songs.compactMap { (song: Song) -> Int? in song.year }.first
+    }
+
+    var displayArtworkData: Data? {
+        if let artworkData {
+            return artworkData
+        }
+
+        return songs.lazy.compactMap(\.artworkData).first
     }
     
     func hash(into hasher: inout Hasher) {

@@ -58,9 +58,7 @@ struct MetadataFetcherView: View {
                 }
             }
             .navigationTitle("Fetch Metadata")
-            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
@@ -190,7 +188,7 @@ struct MetadataFetcherView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "info.circle.fill")
-                    .foregroundColor(.blue)
+                    .foregroundColor(ModernTheme.accentYellow)
                 Text("How it works")
                     .font(ModernTheme.body())
                     .fontWeight(.semibold)
@@ -357,7 +355,7 @@ struct InfoRow: View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.caption)
-                .foregroundColor(.green)
+                .foregroundColor(ModernTheme.success)
             Text(text)
                 .font(ModernTheme.caption())
                 .foregroundColor(ModernTheme.lightGray)

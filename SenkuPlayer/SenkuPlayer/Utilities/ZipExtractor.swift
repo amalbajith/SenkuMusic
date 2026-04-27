@@ -29,7 +29,7 @@ struct ZipExtractor {
     
     /// Extracts a zip archive to the given destination directory.
     /// Returns the list of extracted file URLs.
-    static func extract(zipURL: URL, to destination: URL) throws -> [URL] {
+    nonisolated static func extract(zipURL: URL, to destination: URL) throws -> [URL] {
         let fileManager = FileManager.default
         
         // Create destination if needed
@@ -49,15 +49,15 @@ struct ZipExtractor {
         
         while offset + 30 <= data.count {
             // Read signature
-            let signature = data.readUInt32(at: offset)
+            let signature = Self.readUInt32(from: data, at: offset)
             guard signature == localHeaderSignature else { break }
             
             // Parse local file header
-            let compressionMethod = data.readUInt16(at: offset + 8)
-            let compressedSize = Int(data.readUInt32(at: offset + 18))
-            let uncompressedSize = Int(data.readUInt32(at: offset + 22))
-            let fileNameLength = Int(data.readUInt16(at: offset + 26))
-            let extraFieldLength = Int(data.readUInt16(at: offset + 28))
+            let compressionMethod = Self.readUInt16(from: data, at: offset + 8)
+            let compressedSize = Int(Self.readUInt32(from: data, at: offset + 18))
+            let uncompressedSize = Int(Self.readUInt32(from: data, at: offset + 22))
+            let fileNameLength = Int(Self.readUInt16(from: data, at: offset + 26))
+            let extraFieldLength = Int(Self.readUInt16(from: data, at: offset + 28))
             
             let fileNameStart = offset + 30
             let fileNameEnd = fileNameStart + fileNameLength
@@ -106,7 +106,7 @@ struct ZipExtractor {
     
     /// Decompress deflate data using Apple's Compression framework.
     /// We use the raw DEFLATE algorithm (COMPRESSION_ZLIB with raw flag handling).
-    private static func decompress(data: Data, expectedSize: Int) -> Data? {
+    nonisolated private static func decompress(data: Data, expectedSize: Int) -> Data? {
         // Use a reasonable buffer size — at least expectedSize, with a minimum
         let bufferSize = max(expectedSize, 65536)
         let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
@@ -125,22 +125,94 @@ struct ZipExtractor {
         guard result > 0 else { return nil }
         return Data(bytes: destinationBuffer, count: result)
     }
-}
+    
+    /// Creates a ZIP archive (Stored/no-compression) from all files in a directory.
+    nonisolated static func compress(directory: URL, to destination: URL) throws {
+        var zipData = Data()
+        let fm = FileManager.default
+        var centralDir = Data()
+        var localHeaders: [(offset: UInt32, name: Data, size: UInt32)] = []
+        
+        let allFiles = (try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)) ?? []
+        
+        for fileURL in allFiles {
+            guard !fileURL.hasDirectoryPath else { continue }
+            let fileData = (try? Data(contentsOf: fileURL)) ?? Data()
+            let nameData = Data(fileURL.lastPathComponent.utf8)
+            let offset = UInt32(zipData.count)
+            
+            // Local file header
+            var local = Data()
+            Self.appendUInt32(to: &local, 0x04034b50) // signature
+            Self.appendUInt16(to: &local, 20)          // version needed
+            Self.appendUInt16(to: &local, 0)           // flags
+            Self.appendUInt16(to: &local, 0)           // compression: Stored
+            Self.appendUInt16(to: &local, 0)           // mod time
+            Self.appendUInt16(to: &local, 0)           // mod date
+            Self.appendUInt32(to: &local, 0)           // CRC32 (skip for simplicity)
+            Self.appendUInt32(to: &local, UInt32(fileData.count)) // compressed size
+            Self.appendUInt32(to: &local, UInt32(fileData.count)) // uncompressed size
+            Self.appendUInt16(to: &local, UInt16(nameData.count))
+            Self.appendUInt16(to: &local, 0)           // extra field length
+            local.append(nameData)
+            local.append(fileData)
+            zipData.append(local)
+            
+            localHeaders.append((offset: offset, name: nameData, size: UInt32(fileData.count)))
+        }
+        
+        let centralDirOffset = UInt32(zipData.count)
+        for h in localHeaders {
+            var entry = Data()
+            Self.appendUInt32(to: &entry, 0x02014b50)  // central dir signature
+            Self.appendUInt16(to: &entry, 20)           // version made by
+            Self.appendUInt16(to: &entry, 20)           // version needed
+            Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0)
+            Self.appendUInt32(to: &entry, 0)            // CRC32
+            Self.appendUInt32(to: &entry, h.size); Self.appendUInt32(to: &entry, h.size)
+            Self.appendUInt16(to: &entry, UInt16(h.name.count))
+            Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0); Self.appendUInt16(to: &entry, 0)
+            Self.appendUInt32(to: &entry, 0); Self.appendUInt32(to: &entry, h.offset)
+            entry.append(h.name)
+            centralDir.append(entry)
+        }
+        
+        zipData.append(centralDir)
+        
+        // End of central directory
+        var eocd = Data()
+        Self.appendUInt32(to: &eocd, 0x06054b50)
+        Self.appendUInt16(to: &eocd, 0); Self.appendUInt16(to: &eocd, 0)
+        Self.appendUInt16(to: &eocd, UInt16(localHeaders.count)); Self.appendUInt16(to: &eocd, UInt16(localHeaders.count))
+        Self.appendUInt32(to: &eocd, UInt32(centralDir.count)); Self.appendUInt32(to: &eocd, centralDirOffset)
+        Self.appendUInt16(to: &eocd, 0)
+        zipData.append(eocd)
+        
+        try zipData.write(to: destination)
+    }
 
-// MARK: - Data Helpers for Reading Little-Endian Values
-
-private extension Data {
-    func readUInt16(at offset: Int) -> UInt16 {
-        guard offset + 2 <= count else { return 0 }
-        return self.withUnsafeBytes { ptr in
+    nonisolated private static func readUInt16(from data: Data, at offset: Int) -> UInt16 {
+        guard offset + 2 <= data.count else { return 0 }
+        return data.withUnsafeBytes { ptr in
             ptr.load(fromByteOffset: offset, as: UInt16.self).littleEndian
         }
     }
     
-    func readUInt32(at offset: Int) -> UInt32 {
-        guard offset + 4 <= count else { return 0 }
-        return self.withUnsafeBytes { ptr in
+    nonisolated private static func readUInt32(from data: Data, at offset: Int) -> UInt32 {
+        guard offset + 4 <= data.count else { return 0 }
+        return data.withUnsafeBytes { ptr in
             ptr.load(fromByteOffset: offset, as: UInt32.self).littleEndian
         }
     }
+    
+    nonisolated private static func appendUInt16(to data: inout Data, _ value: UInt16) {
+        var v = value.littleEndian
+        data.append(Data(bytes: &v, count: 2))
+    }
+    
+    nonisolated private static func appendUInt32(to data: inout Data, _ value: UInt32) {
+        var v = value.littleEndian
+        data.append(Data(bytes: &v, count: 4))
+    }
 }
+

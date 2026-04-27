@@ -8,7 +8,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-#if os(iOS)
 import UIKit
 
 struct DocumentPicker: UIViewControllerRepresentable {
@@ -43,28 +42,3 @@ struct DocumentPicker: UIViewControllerRepresentable {
         }
     }
 }
-#elseif os(macOS)
-import AppKit
-
-struct DocumentPicker: View {
-    let onSelect: ([URL]) -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        Color.clear
-            .onAppear {
-                let panel = NSOpenPanel()
-                panel.allowsMultipleSelection = true
-                panel.canChooseDirectories = false
-                panel.allowedContentTypes = [.audio, .mp3, .zip]
-                
-                panel.begin { response in
-                    if response == .OK {
-                        onSelect(panel.urls)
-                    }
-                    dismiss()
-                }
-            }
-    }
-}
-#endif

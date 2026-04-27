@@ -6,72 +6,88 @@
 //
 
 import SwiftUI
-#if os(macOS)
-import AppKit
-#elseif os(iOS)
 import UIKit
-#endif
+import MediaPlayer
 
 struct NowPlayingView: View {
     @StateObject private var player = AudioPlayerManager.shared
     @Environment(\.dismiss) private var dismiss
     @StateObject private var favoritesManager = FavoritesManager.shared
     @State private var backgroundColor: Color = ModernTheme.pureBlack
+    @State private var showingLyrics = false
+    @State private var showingSleepTimer = false
+    @State private var showingQueue = false
+    @State private var showingEqualizer = false
     
     // Developer Settings
-    @AppStorage("devDisableArtworkAnimation") private var devDisableArtworkAnimation = false
+    @AppStorage("performanceProfile") private var performanceProfile: PerformanceProfile = .balanced
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [backgroundColor.opacity(0.85), ModernTheme.backgroundPrimary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 0.6), value: backgroundColor)
-            .overlay {
+        GeometryReader { geometry in
+            ZStack {
+                // ── Background ────────────────────────────────────
                 LinearGradient(
-                    colors: [ModernTheme.pureBlack.opacity(0.15), ModernTheme.pureBlack.opacity(0.55)],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [backgroundColor.opacity(0.85), ModernTheme.backgroundPrimary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.6), value: backgroundColor)
+                .overlay {
+                    LinearGradient(
+                        colors: [ModernTheme.pureBlack.opacity(0.15), ModernTheme.pureBlack.opacity(0.55)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: verticalSpacing(for: geometry.size.height)) {
+                        NowPlayingHeader(
+                            showingLyrics: $showingLyrics,
+                            showingSleepTimer: $showingSleepTimer,
+                            showingQueue: $showingQueue,
+                            showingEqualizer: $showingEqualizer
+                        )
+                        .padding(.top, geometry.safeAreaInsets.top + 20)
+
+                        albumArtwork(in: geometry.size)
+                            .padding(.horizontal, ModernTheme.screenPadding + 16)
+
+                        songInfo
+                            .padding(.horizontal, ModernTheme.screenPadding + 8)
+
+                        if performanceProfile != .eco {
+                            WaveformView(
+                                isPlaying: player.isPlaying,
+                                progress: player.currentTime / max(player.duration, 1),
+                                songURL: player.currentSong?.url,
+                                onSeek: { progress in
+                                    guard player.duration > 0 else { return }
+                                    player.seek(to: progress * player.duration)
+                                }
+                            )
+                            .padding(.horizontal, ModernTheme.screenPadding + 8)
+                        } else {
+                            // Simple progress bar fallback for Eco Mode
+                            Slider(value: Binding(
+                                get: { player.currentTime / max(player.duration, 1) },
+                                set: { player.seek(to: $0 * player.duration) }
+                            ), in: 0...1)
+                            .tint(ModernTheme.accentYellow)
+                            .padding(.horizontal, ModernTheme.screenPadding + 8)
+                            .padding(.vertical, 20)
+                        }
+
+                        playbackControls
+                            .padding(.horizontal, ModernTheme.screenPadding + 8)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geometry.size.height, alignment: .top)
+                    .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24) + 16)
+                }
             }
-            
-            VStack(spacing: 0) {
-                header
-                    .padding(.top, 20)
-                
-                Spacer()
-                    .frame(minHeight: 10, maxHeight: 20)
-                
-                // Large Album Artwork
-                albumArtwork
-                    .padding(.horizontal, ModernTheme.screenPadding + 16) // Extra space for large artwork
-                
-                Spacer()
-                    .frame(minHeight: 20, maxHeight: 30)
-                
-                songInfo
-                    .padding(.horizontal, ModernTheme.screenPadding + 8)
-                
-                WaveformView(
-                    isPlaying: player.isPlaying,
-                    progress: player.currentTime / max(player.duration, 1),
-                    songURL: player.currentSong?.url
-                )
-                .padding(.horizontal, ModernTheme.screenPadding + 8)
-                .padding(.top, 16)
-                
-                Spacer()
-                    .frame(minHeight: 20, maxHeight: 30)
-                
-                playbackControls
-                    .padding(.horizontal, ModernTheme.screenPadding + 16)
-                    .padding(.bottom, 40)
-            }
-            .frame(maxWidth: .infinity)
         }
         .preferredColorScheme(.dark)
         .onChange(of: player.currentSong) { _, _ in
@@ -80,13 +96,12 @@ struct NowPlayingView: View {
         .onAppear {
             updateBackgroundColor()
         }
-        #if os(iOS)
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
                     let horizontal = value.translation.width
                     let vertical = abs(value.translation.height)
-                    guard abs(horizontal) > vertical else { return } // Must be more horizontal than vertical
+                    guard abs(horizontal) > vertical else { return }
                     if horizontal < -50 {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         player.playNext()
@@ -96,61 +111,33 @@ struct NowPlayingView: View {
                     }
                 }
         )
-        #endif
-    }
-    
-    // MARK: - Header
-    private var header: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.title3)
-                    .foregroundColor(ModernTheme.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
-                    .overlay {
-                        Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
-                    }
-                    .contentShape(Rectangle())
-            }
-            
-            Spacer()
-            
-            Text("NOW PLAYING")
-                .font(.system(size: 12, weight: .black))
-                .kerning(4)
-                .foregroundColor(ModernTheme.textSecondary)
-            
-            Spacer()
-            
-            // Buffer to keep title centered
-            Color.clear.frame(width: 44, height: 44)
+        .fullScreenCover(isPresented: $showingLyrics) {
+            LyricsView()
         }
-        .padding(.horizontal, ModernTheme.screenPadding)
-
+        .fullScreenCover(isPresented: $showingEqualizer) {
+            EqualizerView()
+        }
+        .sheet(isPresented: $showingSleepTimer) {
+            SleepTimerView()
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingQueue) {
+            QueueView()
+                .presentationDetents([.large])
+        }
     }
     
     // MARK: - Album Artwork
-    private var albumArtwork: some View {
+    private func albumArtwork(in containerSize: CGSize) -> some View {
         Group {
-            #if os(iOS)
-            // Use windowScene to get screen bounds (UIScreen.main is deprecated in newer iOS versions)
-            let screenWidth = UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .first?.screen.bounds.width ?? 390
-            #else
-            let screenWidth = NSScreen.main?.frame.width ?? 800
-            #endif
-            let size = min(screenWidth - 100, 300)
+            let availableWidth = max(containerSize.width - ((ModernTheme.screenPadding + 16) * 2), 160)
+            let availableHeight = max(containerSize.height * 0.34, 160)
+            let size = min(availableWidth, availableHeight, 320)
             
-            if let song = player.currentSong,
-               let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                
-                ArtworkView(platformImage: platformImage, size: size, glowingColor: backgroundColor)
-                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
+            if let song = player.currentSong {
+                CachedArtworkView(song: song, size: size)
+                    .shadow(color: backgroundColor.opacity(0.4), radius: 20, x: 0, y: 12)
+                    .scaleEffect(player.isPlaying ? 1.0 : 0.8)
                     .animation(.spring(response: 0.6, dampingFraction: 0.7), value: player.isPlaying)
                     .id(song.id)
                     .transition(.asymmetric(
@@ -158,48 +145,16 @@ struct NowPlayingView: View {
                         removal: .opacity
                     ))
             } else {
-                // Fallback
-                ArtworkView(platformImage: nil, size: size, glowingColor: ModernTheme.accentYellow)
-                    .scaleEffect(devDisableArtworkAnimation ? 1.0 : (player.isPlaying ? 1.0 : 0.8))
-                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: player.isPlaying)
-            }
-        }
-    }
-    
-    // MARK: - Artwork Component
-    struct ArtworkView: View {
-        let platformImage: PlatformImage?
-        let size: CGFloat
-        let glowingColor: Color
-        
-        var body: some View {
-            Group {
-                if let image = platformImage {
-                    Image(platformImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    // Fallback visual
-                    ZStack {
-                        Color.gray.opacity(0.3)
-                        Image(systemName: "music.note")
-                            .font(.system(size: size * 0.4))
-                            .foregroundColor(.white.opacity(0.3))
-                    }
+                ZStack {
+                    ModernTheme.backgroundSecondary
+                    Image(systemName: "music.note")
+                        .font(.system(size: size * 0.4))
+                        .foregroundColor(.white.opacity(0.3))
                 }
+                .frame(width: size, height: size)
+                .cornerRadius(16)
             }
-            .frame(width: size, height: size)
-            .cornerRadius(16)
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(ModernTheme.borderSubtle, lineWidth: 1)
-            }
-            // Dynamic colored shadow
-            .shadow(color: glowingColor.opacity(0.4), radius: 20, x: 0, y: 10)
-            // Depth shadow
-            .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 4)
         }
-        .drawingGroup() // Flatten hierarchy for smooth dismissal animation
     }
     
     // MARK: - Song Info
@@ -208,13 +163,15 @@ struct NowPlayingView: View {
             Text((player.currentSong?.title ?? "Not Playing").normalizedForDisplay)
                 .font(ModernTheme.title())
                 .foregroundColor(ModernTheme.textPrimary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .truncationMode(.tail)
             
             Text((player.currentSong?.artist ?? "Unknown Artist").normalizedForDisplay)
                 .font(ModernTheme.body())
                 .foregroundColor(ModernTheme.textSecondary)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .truncationMode(.tail)
 
             albumMetadata
@@ -230,14 +187,26 @@ struct NowPlayingView: View {
     
     // MARK: - Album Metadata
     private var albumMetadata: some View {
-        HStack(spacing: 8) {
-            if let album = player.currentSong?.album, !album.isEmpty {
-                Text(album)
-                    .font(ModernTheme.caption())
-                    .foregroundColor(ModernTheme.textTertiary)
-                
-                Text("•")
-                    .foregroundColor(ModernTheme.textTertiary)
+        let metadataItems = nowPlayingMetadataItems
+
+        return Group {
+            if metadataItems.isEmpty {
+                EmptyView()
+            } else {
+                HStack(spacing: 8) {
+                    ForEach(Array(metadataItems.enumerated()), id: \.offset) { index, item in
+                        if index > 0 {
+                            Text("•")
+                                .foregroundColor(ModernTheme.textTertiary)
+                        }
+
+                        Text(item)
+                            .font(ModernTheme.caption())
+                            .foregroundColor(ModernTheme.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                .lineLimit(1)
             }
         }
     }
@@ -245,13 +214,10 @@ struct NowPlayingView: View {
     // MARK: - Playback Controls
     private var playbackControls: some View {
         VStack(spacing: 24) {
-            // Main controls: Previous, Play/Pause, Next
-            HStack(spacing: 40) {
+            HStack(spacing: 0) {
                 // Previous
                 Button {
-                    #if os(iOS)
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
                     player.playPrevious()
                 } label: {
                     Image(systemName: "backward.fill")
@@ -259,52 +225,40 @@ struct NowPlayingView: View {
                         .foregroundColor(ModernTheme.textPrimary)
                         .frame(width: 60, height: 60)
                         .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
-                        .overlay {
-                            Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
-                        }
-                        .contentShape(Rectangle())
+                        .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
                 }
+                .frame(maxWidth: .infinity)
                 
-                // Play/Pause - The Star Button
+                // Play/Pause
                 Button {
-                    #if os(iOS)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    #endif
                     player.togglePlayPause()
                 } label: {
                     Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                         .font(.system(size: 80))
                         .foregroundStyle(ModernTheme.accentGradient)
                         .shadow(color: ModernTheme.accentYellow.opacity(0.35), radius: 18, x: 0, y: 8)
-                        .contentShape(Circle())
                 }
+                .frame(maxWidth: .infinity)
                 
                 // Next
                 Button {
-                    #if os(iOS)
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
                     player.playNext()
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title)
-                        .foregroundColor(ModernTheme.textPrimary)
+                        .foregroundColor(ModernTheme.accentYellow)
                         .frame(width: 60, height: 60)
                         .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
-                        .overlay {
-                            Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1)
-                        }
-                        .contentShape(Rectangle())
+                        .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
                 }
+                .frame(maxWidth: .infinity)
             }
             
-            // Secondary controls: Shuffle, Heart, Repeat
-            HStack(spacing: 60) {
+            HStack(spacing: 0) {
                 // Shuffle
                 Button {
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
                     player.toggleShuffle()
                 } label: {
                     Image(systemName: player.isShuffled ? "shuffle.circle.fill" : "shuffle")
@@ -312,51 +266,46 @@ struct NowPlayingView: View {
                         .foregroundColor(player.isShuffled ? ModernTheme.accentYellow : ModernTheme.textSecondary)
                         .frame(width: 50, height: 50)
                         .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
-                        .symbolEffect(.bounce, value: player.isShuffled)
                 }
+                .frame(maxWidth: .infinity)
                 
-                // Heart (Favorite)
-                if let song = player.currentSong {
-                    Button {
-                        #if os(iOS)
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        #endif
-                        favoritesManager.toggleFavorite(song: song)
-                    } label: {
-                        Image(systemName: favoritesManager.isFavorite(song: song) ? "heart.fill" : "heart")
-                            .font(.title2)
-                            .foregroundColor(favoritesManager.isFavorite(song: song) ? ModernTheme.accentYellow : ModernTheme.textSecondary)
-                            .frame(width: 50, height: 50)
-                            .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
-                            .symbolEffect(.bounce, value: favoritesManager.isFavorite(song: song))
-                    }
+                // Lyrics (Swapped from Favorite)
+                Button {
+                    showingLyrics = true
+                } label: {
+                    Image(systemName: "quote.bubble.fill")
+                        .font(.title2)
+                        .foregroundColor(ModernTheme.textSecondary)
+                        .frame(width: 50, height: 50)
+                        .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
+                .frame(maxWidth: .infinity)
                 
                 // Repeat
                 Button {
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
                     player.toggleRepeat()
                 } label: {
-                    Group {
-                        switch player.repeatMode {
-                        case .off:
-                            Image(systemName: "repeat")
-                        case .all:
-                            Image(systemName: "repeat.circle.fill")
-                        case .one:
-                            Image(systemName: "repeat.1.circle.fill")
-                        }
-                    }
-                    .font(.title2)
-                    .foregroundColor(player.repeatMode != .off ? ModernTheme.accentYellow : ModernTheme.textSecondary)
-                    .frame(width: 50, height: 50)
-                    .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
-                    .symbolEffect(.bounce, value: player.repeatMode)
+                    Image(systemName: player.repeatMode == .off ? "repeat" : (player.repeatMode == .one ? "repeat.1.circle.fill" : "repeat.circle.fill"))
+                        .font(.title2)
+                        .foregroundColor(player.repeatMode != .off ? ModernTheme.accentYellow : ModernTheme.textSecondary)
+                        .frame(width: 50, height: 50)
+                        .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
+                .frame(maxWidth: .infinity)
             }
         }
+    }
+
+    private var nowPlayingMetadataItems: [String] {
+        guard let song = player.currentSong else { return [] }
+        var items: [String] = []
+        if !song.album.isEmpty, song.album != "Unknown Album" { items.append(song.album) }
+        if let year = song.year { items.append(String(year)) }
+        return items
+    }
+
+    private func verticalSpacing(for height: CGFloat) -> CGFloat {
+        min(max(height * 0.035, 18), 28)
     }
     
     private func updateBackgroundColor() {
@@ -364,11 +313,9 @@ struct NowPlayingView: View {
             backgroundColor = ModernTheme.pureBlack
             return
         }
-        
-        // Extract color on background to avoid stutter
-        DispatchQueue.global(qos: .userInitiated).async {
-            let color = DominantColorExtractor.shared.extractDominantColor(for: song)
-            DispatchQueue.main.async {
+        Task {
+            let color = await DominantColorExtractor.shared.extractDominantColor(for: song)
+            await MainActor.run {
                 withAnimation(.easeInOut(duration: 0.45)) {
                     self.backgroundColor = color
                 }
@@ -377,6 +324,68 @@ struct NowPlayingView: View {
     }
 }
 
-#Preview {
-    NowPlayingView()
+// MARK: - Specialized Subviews to prevent Menu re-render warnings
+struct NowPlayingHeader: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var player = AudioPlayerManager.shared
+    @ObservedObject var favoritesManager = FavoritesManager.shared
+    
+    @Binding var showingLyrics: Bool
+    @Binding var showingSleepTimer: Bool
+    @Binding var showingQueue: Bool
+    @Binding var showingEqualizer: Bool
+    
+    var body: some View {
+        HStack {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.down")
+                    .font(.title3)
+                    .foregroundColor(ModernTheme.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
+                    .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
+            }
+            
+            Spacer()
+            
+            Text("NOW PLAYING")
+                .font(.system(size: 12, weight: .black))
+                .kerning(4)
+                .foregroundColor(ModernTheme.textSecondary)
+            
+            Spacer()
+            
+            Menu {
+                // Favorite (Moved from main row)
+                Button {
+                    if let song = player.currentSong {
+                        favoritesManager.toggleFavorite(song: song)
+                    }
+                } label: {
+                    let isFav = player.currentSong.map { favoritesManager.isFavorite(song: $0) } ?? false
+                    Label(isFav ? "Remove from Favorites" : "Favorite", systemImage: isFav ? "heart.fill" : "heart")
+                }
+                
+                Button { showingEqualizer = true } label: {
+                    Label("Equalizer", systemImage: "slider.horizontal.3")
+                }
+                
+                Button { showingSleepTimer = true } label: {
+                    Label("Sleep Timer", systemImage: "timer")
+                }
+                
+                Button { showingQueue = true } label: {
+                    Label("Up Next", systemImage: "list.number")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.title3)
+                    .foregroundColor(ModernTheme.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .background(ModernTheme.backgroundSecondary.opacity(0.85), in: Circle())
+                    .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
+            }
+        }
+        .padding(.horizontal, ModernTheme.screenPadding)
+    }
 }

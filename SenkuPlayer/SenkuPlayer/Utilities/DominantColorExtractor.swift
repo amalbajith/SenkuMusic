@@ -4,11 +4,8 @@
 //
 
 import SwiftUI
-#if os(iOS)
 import UIKit
-#elseif os(macOS)
-import AppKit
-#endif
+
 
 class DominantColorExtractor {
     static let shared = DominantColorExtractor()
@@ -26,7 +23,11 @@ class DominantColorExtractor {
     }
     
     /// Extract dominant color for a Song
-    func extractDominantColor(for song: Song) -> Color {
+    func extractDominantColor(for song: Song) async -> Color {
+        if UserDefaults.standard.string(forKey: "performanceProfile") == PerformanceProfile.eco.rawValue {
+            return ModernTheme.backgroundSecondary
+        }
+        
         let cacheKey = song.id.uuidString as NSString
         
         if let cached = cache.object(forKey: cacheKey) {
@@ -37,11 +38,7 @@ class DominantColorExtractor {
             return ModernTheme.pureBlack
         }
         
-        #if os(iOS)
         guard let image = UIImage(data: data), let cgImage = image.cgImage else { return ModernTheme.pureBlack }
-        #elseif os(macOS)
-        guard let image = NSImage(data: data), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return ModernTheme.pureBlack }
-        #endif
         
         let color = performExtraction(from: cgImage)
         cache.setObject(ColorWrapper(color), forKey: cacheKey)
