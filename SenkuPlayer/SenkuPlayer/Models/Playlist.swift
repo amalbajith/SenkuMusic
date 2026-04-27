@@ -15,12 +15,16 @@ struct Playlist: Identifiable, Codable {
     var createdDate: Date
     var modifiedDate: Date
     
-    init(id: UUID = UUID(), name: String, songIDs: [UUID] = [], createdDate: Date = Date(), modifiedDate: Date = Date()) {
+    // Spotify Integration
+    var spotifyPlaylistID: String?
+    
+    init(id: UUID = UUID(), name: String, songIDs: [UUID] = [], createdDate: Date = Date(), modifiedDate: Date = Date(), spotifyPlaylistID: String? = nil) {
         self.id = id
         self.name = name
         self.songIDs = songIDs
         self.createdDate = createdDate
         self.modifiedDate = modifiedDate
+        self.spotifyPlaylistID = spotifyPlaylistID
     }
     
     mutating func addSong(_ songID: UUID) {

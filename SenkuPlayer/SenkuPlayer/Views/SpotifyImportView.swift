@@ -273,7 +273,11 @@ struct SpotifyImportView: View {
     
     private func createPlaylist(result: ImportResult) {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        library.createPlaylist(name: "Spotify Mix", songIDs: result.matchedIDs)
+        
+        // Extract the playlist ID from the embed code again or store it in result
+        let spotifyID = SpotifyImportService.shared.extractPlaylistID(from: embedCode)
+        
+        library.createPlaylist(name: "Spotify Mix", songIDs: result.matchedIDs, spotifyPlaylistID: spotifyID)
         dismiss()
     }
 }

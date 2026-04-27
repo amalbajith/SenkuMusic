@@ -135,6 +135,9 @@ class MusicLibraryManager: ObservableObject {
             Task.detached(priority: .background) {
                 await self.autoFetchLyrics(for: foundSongs)
             }
+            
+            // Automatically sync Spotify playlists after import
+            await self.syncSpotifyPlaylists()
         }
     }
     
@@ -232,6 +235,9 @@ class MusicLibraryManager: ObservableObject {
                     await self.autoFetchLyrics(for: [song])
                 }
             }
+            
+            // Trigger sync
+            await self.syncSpotifyPlaylists()
         }
     }
 
@@ -283,6 +289,9 @@ class MusicLibraryManager: ObservableObject {
                 Task.detached(priority: .background) {
                     await self.autoFetchLyrics(for: importedNeedingMetadata)
                 }
+                
+                // Trigger sync after batch import
+                await self.syncSpotifyPlaylists()
             }
         }
     }
@@ -641,6 +650,9 @@ class MusicLibraryManager: ObservableObject {
                 Task.detached(priority: .background) {
                     await self.performMaintenanceSweep()
                 }
+                
+                // Trigger Spotify Sync
+                await self.syncSpotifyPlaylists()
             }
         }
     }
@@ -698,8 +710,8 @@ class MusicLibraryManager: ObservableObject {
     }
     
     // MARK: - Playlist Management
-    func createPlaylist(name: String, songIDs: [UUID] = []) {
-        let playlist = Playlist(name: name, songIDs: songIDs)
+    func createPlaylist(name: String, songIDs: [UUID] = [], spotifyPlaylistID: String? = nil) {
+        let playlist = Playlist(name: name, songIDs: songIDs, spotifyPlaylistID: spotifyPlaylistID)
         playlists.append(playlist)
         savePlaylists()
     }
@@ -722,6 +734,36 @@ class MusicLibraryManager: ObservableObject {
                 playlists[index].addSong(songID)
             }
             savePlaylists()
+        }
+    }
+    
+    /// Synchronizes all Spotify-linked playlists with the current library.
+    /// This will automatically add any newly matched songs from the library to the playlists.
+    func syncSpotifyPlaylists() async {
+        let playlistsToSync = playlists.filter { $0.spotifyPlaylistID != nil }
+        guard !playlistsToSync.isEmpty else { return }
+        
+        #if DEBUG
+        print("🔄 Syncing \(playlistsToSync.count) Spotify playlists...")
+        #endif
+        
+        for playlist in playlistsToSync {
+            guard let spotifyID = playlist.spotifyPlaylistID else { continue }
+            
+            do {
+                // Fetch current tracks from Spotify
+                let spotifyTracks = try await SpotifyImportService.shared.fetchPlaylistTracks(playlistID: spotifyID)
+                
+                // Match with current library
+                let matchedIDs = SpotifyImportService.shared.matchTracksWithLibrary(spotifyTracks: spotifyTracks, librarySongs: self.songs)
+                
+                // Add missing songs
+                await MainActor.run {
+                    self.addSongsToPlaylist(matchedIDs, playlist: playlist)
+                }
+            } catch {
+                print("⚠️ MusicLibraryManager: Failed to sync playlist \(playlist.name): \(error)")
+            }
         }
     }
 }
