@@ -102,7 +102,7 @@ struct QueueView: View {
 
     private func nowPlayingRow(_ song: Song) -> some View {
         HStack(spacing: 12) {
-            SongArtworkThumbnail(song: song, size: 48, cornerRadius: 10)
+            CachedArtworkView(song: song, size: 48, cornerRadius: 10)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(song.title.normalizedForDisplay)
@@ -138,7 +138,7 @@ struct QueueView: View {
 
     private func queueRow(song: Song, queueOffset: Int) -> some View {
         HStack(spacing: 12) {
-            SongArtworkThumbnail(song: song, size: 44, cornerRadius: 8)
+            CachedArtworkView(song: song, size: 44, cornerRadius: 8)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(song.title.normalizedForDisplay)
