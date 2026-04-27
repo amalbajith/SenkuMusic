@@ -16,6 +16,7 @@ struct ZipExtractor {
         case unsupportedCompression(UInt16)
         case decompressionFailed
         case readError
+        case securityLimitExceeded
         
         var errorDescription: String? {
             switch self {
@@ -23,9 +24,12 @@ struct ZipExtractor {
             case .unsupportedCompression(let method): return "Unsupported compression method: \(method)."
             case .decompressionFailed: return "Failed to decompress a file in the archive."
             case .readError: return "Failed to read the archive."
+            case .securityLimitExceeded: return "Security limit exceeded: file is too large to decompress."
             }
         }
     }
+    
+    private static let MAX_DECOMPRESSION_SIZE = 200 * 1024 * 1024 // 200MB limit for security
     
     /// Extracts a zip archive to the given destination directory.
     /// Returns the list of extracted file URLs.
@@ -74,9 +78,30 @@ struct ZipExtractor {
             
             // Skip directories and hidden/metadata files
             if !fileName.hasSuffix("/") && !fileName.hasPrefix("__MACOSX") && !fileName.contains("/.") {
-                // Sanitize path — use only the last component to avoid directory traversal
-                let sanitizedName = URL(fileURLWithPath: fileName).lastPathComponent
-                let outputURL = destination.appendingPathComponent(sanitizedName)
+                // Security: Prevent Zip Bomb
+                guard uncompressedSize <= MAX_DECOMPRESSION_SIZE else {
+                    throw ZipError.securityLimitExceeded
+                }
+                
+                // Security & Bug Fix: Sanitize path and support subdirectories
+                // 1. Remove any leading slashes or ".." components
+                let sanitizedPath = fileName.components(separatedBy: "/")
+                    .filter { !$0.isEmpty && $0 != ".." && $0 != "." }
+                    .joined(separator: "/")
+                
+                let outputURL = destination.appendingPathComponent(sanitizedPath)
+                
+                // 2. Ensure the resulting path is still within the destination
+                guard outputURL.path.hasPrefix(destination.path) else {
+                    offset = dataEnd
+                    continue
+                }
+                
+                // Create parent directories if needed
+                let parentDir = outputURL.deletingLastPathComponent()
+                if !fileManager.fileExists(atPath: parentDir.path) {
+                    try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
+                }
                 
                 let compressedData = data[dataStart..<dataEnd]
                 
@@ -107,6 +132,9 @@ struct ZipExtractor {
     /// Decompress deflate data using Apple's Compression framework.
     /// We use the raw DEFLATE algorithm (COMPRESSION_ZLIB with raw flag handling).
     nonisolated private static func decompress(data: Data, expectedSize: Int) -> Data? {
+        // Security: Prevent extremely large buffers
+        guard expectedSize <= MAX_DECOMPRESSION_SIZE else { return nil }
+        
         // Use a reasonable buffer size — at least expectedSize, with a minimum
         let bufferSize = max(expectedSize, 65536)
         let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
@@ -193,16 +221,20 @@ struct ZipExtractor {
 
     nonisolated private static func readUInt16(from data: Data, at offset: Int) -> UInt16 {
         guard offset + 2 <= data.count else { return 0 }
-        return data.withUnsafeBytes { ptr in
-            ptr.load(fromByteOffset: offset, as: UInt16.self).littleEndian
+        var value: UInt16 = 0
+        let _ = withUnsafeMutableBytes(of: &value) { bytes in
+            data.copyBytes(to: bytes, from: offset..<offset+2)
         }
+        return value.littleEndian
     }
     
     nonisolated private static func readUInt32(from data: Data, at offset: Int) -> UInt32 {
         guard offset + 4 <= data.count else { return 0 }
-        return data.withUnsafeBytes { ptr in
-            ptr.load(fromByteOffset: offset, as: UInt32.self).littleEndian
+        var value: UInt32 = 0
+        let _ = withUnsafeMutableBytes(of: &value) { bytes in
+            data.copyBytes(to: bytes, from: offset..<offset+4)
         }
+        return value.littleEndian
     }
     
     nonisolated private static func appendUInt16(to data: inout Data, _ value: UInt16) {

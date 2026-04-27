@@ -42,20 +42,33 @@ class LyricsFetcher {
         
         var request = URLRequest(url: url)
         request.setValue("SenkuMusicPlayer/1.0", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10.0 // 10 second timeout
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else { return nil }
-        
-        if httpResponse.statusCode == 404 {
-            // Not found
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("⚠️ LyricsFetcher: Invalid response type")
+                return nil
+            }
+            
+            if httpResponse.statusCode == 404 {
+                // Not found
+                return nil
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                print("⚠️ LyricsFetcher: Server returned status \(httpResponse.statusCode)")
+                return nil
+            }
+            
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(LRCLibResponse.self, from: data)
+            return result
+        } catch {
+            print("⚠️ LyricsFetcher: Error fetching lyrics: \(error.localizedDescription)")
+            // Re-throw to let the caller handle it if needed, or return nil
             return nil
         }
-        
-        guard httpResponse.statusCode == 200 else { return nil }
-        
-        let decoder = JSONDecoder()
-        let result = try decoder.decode(LRCLibResponse.self, from: data)
-        return result
     }
 }

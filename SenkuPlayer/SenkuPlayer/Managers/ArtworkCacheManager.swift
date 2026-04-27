@@ -16,7 +16,7 @@ final class ArtworkCacheManager: ObservableObject {
     @Published private var _cacheToken = UUID() // Dummy to ensure protocol compliance
     
     private let cache = NSCache<NSString, UIImage>()
-    private var inProgressTasks: [UUID: Task<UIImage?, Never>] = [:]
+    private var inProgressTasks: [NSString: Task<UIImage?, Never>] = [:]
     
     private init() {
         cache.countLimit = 200 // Cache up to 200 decoded images
@@ -32,7 +32,7 @@ final class ArtworkCacheManager: ObservableObject {
         }
         
         // 2. Check if a task is already decoding this image
-        if let task = inProgressTasks[song.id] {
+        if let task = inProgressTasks[cacheKey] {
             return await task.value
         }
         
@@ -54,9 +54,9 @@ final class ArtworkCacheManager: ObservableObject {
             }.value
         }
         
-        inProgressTasks[song.id] = task
+        inProgressTasks[cacheKey] = task
         let finalImage = await task.value
-        inProgressTasks[song.id] = nil
+        inProgressTasks[cacheKey] = nil
         
         if let image = finalImage {
             cache.setObject(image, forKey: cacheKey, cost: Int(size * size * 4))
