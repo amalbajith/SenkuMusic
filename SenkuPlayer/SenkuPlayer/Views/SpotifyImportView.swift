@@ -138,7 +138,7 @@ struct SpotifyImportView: View {
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text("We found \(result.totalFound) tracks on Spotify, but none of them matched the music in your local library.")
+            Text("We found \(result.totalFound) tracks on \"\(result.playlistName)\", but none of them matched the music in your local library.")
                 .font(.subheadline)
                 .foregroundColor(ModernTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -184,9 +184,10 @@ struct SpotifyImportView: View {
                     .font(.system(size: 60))
                     .foregroundColor(ModernTheme.accentYellow)
                 
-                Text("Matches Found!")
+                Text(result.playlistName)
                     .font(.title2)
                     .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
                 
                 Text("We matched \(result.matchedCount) of \(result.totalFound) tracks.")
                     .font(.subheadline)
@@ -249,16 +250,16 @@ struct SpotifyImportView: View {
         
         Task {
             do {
-                let tracks = try await SpotifyImportService.shared.fetchPlaylistTracks(playlistID: playlistID)
-                let matchedIDs = SpotifyImportService.shared.matchTracksWithLibrary(spotifyTracks: tracks, librarySongs: library.songs)
+                let info = try await SpotifyImportService.shared.fetchPlaylistInfo(playlistID: playlistID)
+                let matchedIDs = SpotifyImportService.shared.matchTracksWithLibrary(spotifyTracks: info.tracks, librarySongs: library.songs)
                 
                 await MainActor.run {
                     self.importResult = ImportResult(
-                        playlistName: "Spotify Import",
-                        totalFound: tracks.count,
+                        playlistName: info.name,
+                        totalFound: info.tracks.count,
                         matchedCount: matchedIDs.count,
                         matchedIDs: matchedIDs,
-                        trackNamesFound: tracks.map { "\($0.title) - \($0.artist)" }
+                        trackNamesFound: info.tracks.map { "\($0.title) - \($0.artist)" }
                     )
                     self.isProcessing = false
                 }
@@ -277,7 +278,7 @@ struct SpotifyImportView: View {
         // Extract the playlist ID from the embed code again or store it in result
         let spotifyID = SpotifyImportService.shared.extractPlaylistID(from: embedCode)
         
-        library.createPlaylist(name: "Spotify Mix", songIDs: result.matchedIDs, spotifyPlaylistID: spotifyID)
+        library.createPlaylist(name: result.playlistName, songIDs: result.matchedIDs, spotifyPlaylistID: spotifyID)
         dismiss()
     }
 }

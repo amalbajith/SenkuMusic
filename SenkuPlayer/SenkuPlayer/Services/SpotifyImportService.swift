@@ -11,6 +11,11 @@ struct SpotifyTrack: Codable {
     let artist: String
 }
 
+struct SpotifyPlaylistInfo {
+    let name: String
+    let tracks: [SpotifyTrack]
+}
+
 class SpotifyImportService {
     static let shared = SpotifyImportService()
     
@@ -33,15 +38,15 @@ class SpotifyImportService {
         return nil
     }
     
-    /// Fetches track information from a Spotify playlist page.
-    func fetchPlaylistTracks(playlistID: String) async throws -> [SpotifyTrack] {
-        // We try both the embed URL and the main playlist URL as they provide different data structures
+    /// Fetches track information and playlist name from a Spotify playlist page.
+    func fetchPlaylistInfo(playlistID: String) async throws -> SpotifyPlaylistInfo {
         let urls = [
-            "https://open.spotify.com/embed/playlist/\(playlistID)",
-            "https://open.spotify.com/playlist/\(playlistID)"
+            "https://open.spotify.com/playlist/\(playlistID)",
+            "https://open.spotify.com/embed/playlist/\(playlistID)"
         ]
         
         var allFoundTracks: [SpotifyTrack] = []
+        var playlistName = "Spotify Mix"
         
         for urlString in urls {
             guard let url = URL(string: urlString) else { continue }
@@ -53,6 +58,12 @@ class SpotifyImportService {
             do {
                 let (data, _) = try await URLSession.shared.data(for: request)
                 if let html = String(data: data, encoding: .utf8) {
+                    // Extract Name
+                    if let name = parsePlaylistName(from: html) {
+                        playlistName = name
+                    }
+                    
+                    // Extract Tracks
                     let found = parseTracks(from: html)
                     for track in found {
                         if !allFoundTracks.contains(where: { $0.title == track.title }) {
@@ -64,17 +75,37 @@ class SpotifyImportService {
                 print("⚠️ SpotifyImport: Failed to fetch from \(urlString): \(error)")
             }
             
-            if allFoundTracks.count > 5 { break } // If we found a good number, stop
+            if allFoundTracks.count > 5 { break }
         }
         
-        return allFoundTracks
+        return SpotifyPlaylistInfo(name: playlistName, tracks: allFoundTracks)
+    }
+    
+    private func parsePlaylistName(from html: String) -> String? {
+        // 1. Try meta tags
+        let patterns = [
+            #"<meta\s+property=\"og:title\"\s+content=\"([^\"]+)\""#,
+            #"\"name\"\s*:\s*\"([^\"]+)\"\s*,\s*\"type\"\s*:\s*\"playlist\""#,
+            #"<title>([^<]+)\s*\|\s*Spotify</title>"#
+        ]
+        
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+               let match = regex.firstMatch(in: html, options: [], range: NSRange(html.startIndex..., in: html)) {
+                if let range = Range(match.range(at: 1), in: html) {
+                    let name = String(html[range]).decodingHTMLEntities()
+                    if name != "Spotify" && !name.isEmpty {
+                        return name
+                    }
+                }
+            }
+        }
+        return nil
     }
     
     private func parseTracks(from html: String) -> [SpotifyTrack] {
         var tracks: [SpotifyTrack] = []
         
-        // 1. Brute force JSON search for "name":"..." and "artists":[{"name":"..."}]
-        // This is the most common pattern in Spotify's internal data blobs
         let jsonPattern = #"\"name\"\s*:\s*\"([^\"]+)\"\s*,\s*\"artists\"\s*:\s*\[\s*\{\s*\"name\"\s*:\s*\"([^\"]+)\""#
         if let regex = try? NSRegularExpression(pattern: jsonPattern, options: []) {
             let matches = regex.matches(in: html, options: [], range: NSRange(html.startIndex..., in: html))
@@ -90,7 +121,6 @@ class SpotifyImportService {
             }
         }
         
-        // 2. Search for "title":"..." and "subtitle":"..." pairs (used in newer embeds)
         if tracks.isEmpty {
             let titleSubtitlePattern = #"\"title\"\s*:\s*\"([^\"]+)\"\s*,\s*\"subtitle\"\s*:\s*\"([^\"]+)\""#
             if let regex = try? NSRegularExpression(pattern: titleSubtitlePattern, options: []) {
@@ -106,12 +136,6 @@ class SpotifyImportService {
             }
         }
         
-        // 3. Last Resort: Search for OpenGraph/Meta tags (often contains the first few tracks)
-        if tracks.isEmpty {
-            let metaPattern = #"<meta\s+name=\"music:song\"\s+content=\"([^\"]+)\""#
-            // Note: This only gives IDs, but sometimes titles are in descriptions
-        }
-        
         return tracks
     }
     
@@ -123,12 +147,10 @@ class SpotifyImportService {
             let sTitle = sTrack.title.lowercased().trimmingCharacters(in: .whitespaces)
             let sArtist = sTrack.artist.lowercased().trimmingCharacters(in: .whitespaces)
             
-            // Try different matching strategies
             let match = librarySongs.first { song in
                 let lTitle = song.title.lowercased()
                 let lArtist = song.artist.lowercased()
                 
-                // Remove noise
                 let cleanL = lTitle.replacingOccurrences(of: "\\s*\\([^)]*\\)", with: "", options: .regularExpression)
                 let cleanS = sTitle.replacingOccurrences(of: "\\s*\\([^)]*\\)", with: "", options: .regularExpression)
                 
@@ -152,7 +174,6 @@ private extension String {
         if !self.contains("&") && !self.contains("\\u") { return self }
         
         var result = self
-        // Fast path for common Unicode escapes in JSON
         if self.contains("\\u") {
             let pattern = "\\\\u([0-9a-fA-F]{4})"
             if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
