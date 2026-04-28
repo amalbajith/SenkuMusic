@@ -9,10 +9,10 @@ import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var library = MusicLibraryManager.shared
-    @StateObject private var player = AudioPlayerManager.shared
     @State private var searchText = ""
     @State private var showingFilePicker = false
     @State private var showingSearch = false
+    @State private var hasSong: Bool = AudioPlayerManager.shared.currentSong != nil
     
     var body: some View {
         NavigationStack {
@@ -53,6 +53,7 @@ struct LibraryView: View {
                 }
             }
             .preferredColorScheme(.dark)
+            .onReceive(AudioPlayerManager.shared.$currentSong) { hasSong = $0 != nil }
             .sheet(isPresented: $showingFilePicker) {
                 DocumentPicker { urls in
                     library.importFiles(urls)
@@ -229,20 +230,8 @@ struct RecentlyAddedCard: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
                 // Artwork Container
-                ZStack {
-                    if let artworkData = song.artworkData,
-                       let platformImage = PlatformImage.fromData(artworkData) {
-                        Image(platformImage: platformImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        ModernTheme.accentYellow.opacity(0.15)
-                            .overlay(Image(systemName: "music.note").foregroundColor(ModernTheme.accentYellow.opacity(0.8)))
-                    }
-                }
-                .frame(width: 170, height: 170)
-                .cornerRadius(12)
-                .shadow(radius: 10)
+                CachedArtworkView(song: song, size: 170, cornerRadius: 12)
+                    .shadow(radius: 10)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title.normalizedForDisplay)
@@ -264,36 +253,26 @@ struct RecentlyAddedCard: View {
 struct SongRowView: View {
     let song: Song
     let action: () -> Void
-    @StateObject private var player = AudioPlayerManager.shared
-    
-    var isCurrentSong: Bool {
-        player.currentSong?.id == song.id
-    }
-    
+    @State private var currentSongId: UUID? = AudioPlayerManager.shared.currentSong?.id
+
+    var isCurrentSong: Bool { currentSongId == song.id }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
                 // Thumbnail
                 ZStack {
-                    if let artworkData = song.artworkData,
-                       let platformImage = PlatformImage.fromData(artworkData) {
-                        Image(platformImage: platformImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        ModernTheme.borderSubtle
-                            .overlay(Image(systemName: "music.note").font(.caption))
-                    }
+                    CachedArtworkView(song: song, size: 48, cornerRadius: 8)
                     
                     if isCurrentSong {
                         Color.black.opacity(0.4)
+                            .cornerRadius(8)
                         Image(systemName: "waveform")
                             .foregroundColor(ModernTheme.accentYellow)
                             .font(.caption)
                     }
                 }
                 .frame(width: 48, height: 48)
-                .cornerRadius(8)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(song.title.normalizedForDisplay)
@@ -315,11 +294,11 @@ struct SongRowView: View {
                 
                 Menu {
                     Button {
-                        player.playNext(song: song)
+                        AudioPlayerManager.shared.playNext(song: song)
                     } label: {
                         Label("Play Next", systemImage: "text.insert")
                     }
-                    
+
                     Button {
                         FavoritesManager.shared.toggleFavorite(song: song)
                     } label: {
@@ -328,9 +307,9 @@ struct SongRowView: View {
                             systemImage: FavoritesManager.shared.isFavorite(song: song) ? "heart.fill" : "heart"
                         )
                     }
-                    
+
                     Divider()
-                    
+
                     Button(role: .destructive) {
                         // Delete logic if needed
                     } label: {
@@ -355,6 +334,7 @@ struct SongRowView: View {
             )
         }
         .buttonStyle(.plain)
+        .onReceive(AudioPlayerManager.shared.$currentSong) { currentSongId = $0?.id }
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {

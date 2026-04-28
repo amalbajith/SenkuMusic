@@ -12,6 +12,7 @@ class AudioPlayerManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published var currentSong: Song?
     @Published var isPlaying = false
+    @Published var isBuffering = false
     @Published var currentTime: TimeInterval = 0
     @Published var duration: TimeInterval = 0
     @Published var queue: [Song] = []
@@ -39,6 +40,10 @@ class AudioPlayerManager: NSObject, ObservableObject {
     // MARK: - Audio Engine Properties
     private let engine = AVAudioEngine()
     private let playerNode = AVAudioPlayerNode()
+    private var streamingPlayer: AVPlayer?
+    private var streamingObserver: Any?
+    private var streamingStatusObserver: NSKeyValueObservation?
+    private var streamingTimeObserver: Any?
     
     // Playback State
     private var currentFile: AVAudioFile?
@@ -258,46 +263,153 @@ class AudioPlayerManager: NSObject, ObservableObject {
         print("⏭️ Scheduled next: \(song.title)")
         #endif
     }
-    
-        private func startPlayback(with song: Song) {
+
+    private func startPlayback(with song: Song) {
         self.currentSong = song
         MusicLibraryManager.shared.recordPlay(for: song)
-        applyReplayGain(for: song)
         
         let token = UUID()
         self.playbackToken = token
         
+        // Stop both engines first to ensure no overlap
         playerNode.stop()
-        
-        do {
-            currentFile = try AVAudioFile(forReading: song.url)
-            guard let file = currentFile else { return }
+        streamingPlayer?.pause()
+        streamingPlayer = nil
+        if let observer = streamingObserver {
+            NotificationCenter.default.removeObserver(observer)
+            streamingObserver = nil
+        }
+
+        if song.isRemote {
+            // ── REMOTE STREAMING PATH ────────────────────────
+            // Stream URL is fetched lazily here (not at tap time)
+            // This ensures we always have a fresh, non-expired URL
+            isBuffering = true
+            duration = song.duration // Use metadata duration; will update from AVPlayer
             
-            sampleRate = file.processingFormat.sampleRate
-            duration = Double(file.length) / sampleRate
-            
-            if !engine.isRunning { try engine.start() }
-            
-            playerNode.scheduleFile(file, at: nil) { [weak self] in
-                guard let self = self, self.playbackToken == token else { return }
-                self.handlePlaybackFinished()
+            Task {
+                do {
+                    // Extract videoId from the song's source URL
+                    let videoId = song.url.lastPathComponent
+                    let streamURL = try await CloudDiscoveryService.shared.getStreamURL(for: videoId)
+                    
+                    await MainActor.run { [weak self] in
+                        guard let self = self, self.playbackToken == token else { return }
+                        self.startStreamingPlayer(streamURL: streamURL, song: song, token: token)
+                    }
+                } catch {
+                    await MainActor.run { [weak self] in
+                        guard let self = self, self.playbackToken == token else { return }
+                        self.isBuffering = false
+                        self.isPlaying = false
+                        #if DEBUG
+                        print("❌ Cloud stream error: \(error.localizedDescription)")
+                        #endif
+                    }
+                }
             }
+        } else {
+            // ── LOCAL FILE PATH (AVAudioEngine) ──────────────
+            applyReplayGain(for: song)
+            do {
+                currentFile = try AVAudioFile(forReading: song.url)
+                guard let file = currentFile else { return }
+                
+                sampleRate = file.processingFormat.sampleRate
+                duration = Double(file.length) / sampleRate
+                
+                if !engine.isRunning { try engine.start() }
+                
+                playerNode.scheduleFile(file, at: nil) { [weak self] in
+                    guard let self = self, self.playbackToken == token else { return }
+                    self.handlePlaybackFinished()
+                }
 
-            playerNode.play()
-            isPlaying = true
-            seekFrame = 0
+                playerNode.play()
+                isPlaying = true
+                seekFrame = 0
 
-            startTimers()
-            updateNowPlayingInfo(rebuildArtwork: true)
-        } catch {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                self?.playNext()
+                startTimers()
+                updateNowPlayingInfo(rebuildArtwork: true)
+            } catch {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    self?.playNext()
+                }
             }
         }
     }
-
     
-    // MARK: - Playback Handlers
+    /// Starts AVPlayer for a resolved stream URL
+    private func startStreamingPlayer(streamURL: URL, song: Song, token: UUID) {
+        // ── Stop AVAudioEngine so it doesn't hold the audio hardware ──
+        if engine.isRunning { engine.stop() }
+
+        // ── Re-activate the audio session for AVPlayer ────────────────
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("⚠️ Audio session re-activation failed: \(error.localizedDescription)")
+        }
+
+        let playerItem = AVPlayerItem(url: streamURL)
+
+        // ── Create player first ───────────────────────────────────────
+        let player = AVPlayer(playerItem: playerItem)
+        player.automaticallyWaitsToMinimizeStalling = true
+        streamingPlayer = player
+
+        // ── End-of-track notification ─────────────────────────────────
+        streamingObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, self.playbackToken == token else { return }
+            self.handlePlaybackFinished()
+        }
+
+        // ── KVO: status (readyToPlay / failed) ────────────────────────
+        streamingStatusObserver = playerItem.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                switch item.status {
+                case .readyToPlay:
+                    self.isBuffering = false
+                    let avDuration = item.duration.seconds
+                    if avDuration.isFinite && avDuration > 0 { self.duration = avDuration }
+                case .failed:
+                    let errMsg = item.error?.localizedDescription ?? "unknown"
+                    print("❌ AVPlayerItem failed: \(errMsg)")
+                    self.isBuffering = false
+                    self.isPlaying  = false
+                    Task { await CloudDiscoveryService.shared.invalidateStream(for: song.url.lastPathComponent) }
+                default: break
+                }
+            }
+        }
+
+        // ── Periodic observer: buffer-stall / currentTime ─────────────
+        streamingTimeObserver = player.addPeriodicTimeObserver(
+            forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
+            queue: .main
+        ) { [weak self] time in
+            guard let self = self, self.currentSong?.isRemote == true else { return }
+            self.currentTime = time.seconds
+            let stalled = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
+            if self.isBuffering != stalled { self.isBuffering = stalled }
+        }
+
+        player.play()
+        isPlaying   = true
+        isBuffering = true   // stays true until .readyToPlay KVO fires
+        currentTime = 0
+        updateNowPlayingInfo(rebuildArtwork: true)
+        // NOTE: Do NOT call startTimers() here — the periodic observer above
+        // handles currentTime updates for streaming. startTimers() uses AVAudioEngine frames.
+    }
+
         private func handlePlaybackFinished() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -316,14 +428,22 @@ class AudioPlayerManager: NSObject, ObservableObject {
     // MARK: - Controls
     func play() {
         guard currentSong != nil else { return }
-        if !engine.isRunning { try? engine.start() }
-        playerNode.play()
+        if currentSong?.isRemote == true {
+            streamingPlayer?.play()
+        } else {
+            if !engine.isRunning { try? engine.start() }
+            playerNode.play()
+        }
         isPlaying = true
         startTimers()
     }
     
     func pause() {
-        playerNode.pause()
+        if currentSong?.isRemote == true {
+            streamingPlayer?.pause()
+        } else {
+            playerNode.pause()
+        }
         isPlaying = false
         playbackTimer?.invalidate()
     }
@@ -331,19 +451,27 @@ class AudioPlayerManager: NSObject, ObservableObject {
     func togglePlayPause() { isPlaying ? pause() : play() }
     
     func stop() {
-        self.playbackToken = UUID() // Invalidate old completion handlers
+        self.playbackToken = UUID()
         playerNode.stop()
-        
         engine.stop()
-        isPlaying = false
-        playbackTimer?.invalidate()
         
+        // Clean up streaming player fully
+        streamingPlayer?.pause()
+        streamingStatusObserver?.invalidate()
+        streamingStatusObserver = nil
+        if let t = streamingTimeObserver { streamingPlayer?.removeTimeObserver(t) }
+        streamingTimeObserver = nil
+        if let obs = streamingObserver { NotificationCenter.default.removeObserver(obs) }
+        streamingObserver = nil
+        streamingPlayer = nil
+        
+        isPlaying = false
+        isBuffering = false
+        playbackTimer?.invalidate()
         currentSong = nil
         currentTime = 0
         duration = 0
         currentFile = nil
-        
-        
         seekFrame = 0
         isNowPlayingPresented = false
     }
@@ -379,34 +507,37 @@ class AudioPlayerManager: NSObject, ObservableObject {
     }
     
     func seek(to time: TimeInterval) {
-        guard let file = currentFile else { return }
-        let position = AVAudioFramePosition(time * sampleRate)
-        
-        // Update Token to invalidate current playback's completion handler
         let newToken = UUID()
         self.playbackToken = newToken
         
-        playerNode.stop()
-        
-        if position < file.length {
-            let frameCount = AVAudioFrameCount(file.length - position)
-            playerNode.scheduleSegment(
-                file,
-                startingFrame: position,
-                frameCount: frameCount,
-                at: nil
-            ) { [weak self] in
-                guard let self = self, self.playbackToken == newToken else { return }
-                self.handlePlaybackFinished()
+        if currentSong?.isRemote == true {
+            let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
+            streamingPlayer?.seek(to: cmTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            currentTime = time
+        } else {
+            guard let file = currentFile else { return }
+            let position = AVAudioFramePosition(time * sampleRate)
+            
+            playerNode.stop()
+            
+            if position < file.length {
+                let frameCount = AVAudioFrameCount(file.length - position)
+                playerNode.scheduleSegment(
+                    file,
+                    startingFrame: position,
+                    frameCount: frameCount,
+                    at: nil
+                ) { [weak self] in
+                    guard let self = self, self.playbackToken == newToken else { return }
+                    self.handlePlaybackFinished()
+                }
             }
+
+            playerNode.prepare(withFrameCount: 4096)
+            if isPlaying { playerNode.play() }
+            seekFrame = position
+            currentTime = time
         }
-
-        // BUG-03: pre-roll buffer so paused-seek resumes from correct position
-        playerNode.prepare(withFrameCount: 4096)
-        if isPlaying { playerNode.play() }
-
-        seekFrame = position
-        currentTime = time
         updateNowPlayingInfo()
     }
     
@@ -436,14 +567,19 @@ class AudioPlayerManager: NSObject, ObservableObject {
         private func updatePlaybackLoop() {
         guard isPlaying else { return }
         
-        if let nodeTime = playerNode.lastRenderTime,
-           let playerTime = playerNode.playerTime(forNodeTime: nodeTime) {
-            
-            // Calculate time based on the node's output sample rate vs the file's sample rate
-            let timePlayedByNode = Double(playerTime.sampleTime) / playerTime.sampleRate
-            let baseTime = Double(seekFrame) / sampleRate
-            
-            currentTime = baseTime + timePlayedByNode
+        if currentSong?.isRemote == true {
+            if let time = streamingPlayer?.currentTime().seconds, !time.isNaN {
+                currentTime = time
+            }
+        } else {
+            if let nodeTime = playerNode.lastRenderTime,
+               let playerTime = playerNode.playerTime(forNodeTime: nodeTime) {
+                
+                let timePlayedByNode = Double(playerTime.sampleTime) / playerTime.sampleRate
+                let baseTime = Double(seekFrame) / sampleRate
+                
+                currentTime = baseTime + timePlayedByNode
+            }
         }
     }
 
@@ -549,9 +685,43 @@ class AudioPlayerManager: NSObject, ObservableObject {
         guard let info = notification.userInfo,
               let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
-        // Apple HIG: pause when headphones unplugged
-        if reason == .oldDeviceUnavailable {
+
+        switch reason {
+        case .oldDeviceUnavailable:
+            // Apple HIG: pause when headphones/BT disconnects
             DispatchQueue.main.async { self.pause() }
+
+        case .newDeviceAvailable:
+            // Auto-play on Bluetooth car stereo connect
+            guard UserDefaults.standard.bool(forKey: "autoPlayOnBluetooth") else { return }
+            let currentRoute = AVAudioSession.sharedInstance().currentRoute
+            let savedName = UserDefaults.standard.string(forKey: "bluetoothCarName") ?? ""
+
+            let matchingOutput = currentRoute.outputs.first {
+                guard [.bluetoothA2DP, .bluetoothLE, .bluetoothHFP].contains($0.portType) else { return false }
+                // If no device name saved → match any BT audio device
+                // If name saved → case-insensitive contains match (handles capitalisation variants)
+                if savedName.isEmpty { return true }
+                return $0.portName.localizedCaseInsensitiveContains(savedName)
+                    || savedName.localizedCaseInsensitiveContains($0.portName)
+            }
+            guard matchingOutput != nil else { return }
+
+            // Small delay: gives the BT audio stack time to negotiate codec/sample rate
+            // before we push audio through — avoids the silent-first-second glitch on
+            // car stereos.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                guard let self, !self.isPlaying else { return }
+                if self.currentSong != nil {
+                    self.play()
+                } else if !MusicLibraryManager.shared.songs.isEmpty {
+                    // Nothing was queued — start from the beginning of the library
+                    let songs = MusicLibraryManager.shared.songs
+                    self.playSong(songs[0], in: songs, at: 0)
+                }
+            }
+
+        default: break
         }
     }
 

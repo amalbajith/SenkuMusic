@@ -13,14 +13,12 @@ struct Album: Identifiable, Hashable {
     let name: String
     let artist: String
     var songs: [Song]
-    var artworkData: Data?
     
-    init(id: UUID = UUID(), name: String, artist: String, songs: [Song] = [], artworkData: Data? = nil) {
+    init(id: UUID = UUID(), name: String, artist: String, songs: [Song] = []) {
         self.id = id
         self.name = name
         self.artist = artist
         self.songs = songs
-        self.artworkData = artworkData
     }
     
     var totalDuration: TimeInterval {

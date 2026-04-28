@@ -12,9 +12,10 @@ struct LyricLine: Identifiable, Equatable {
 }
 
 class LRCParser {
+    private static let regex = try! NSRegularExpression(pattern: "\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
+    
     static func parse(lrc: String) -> [LyricLine] {
         var lines: [LyricLine] = []
-        let regex = try! NSRegularExpression(pattern: "\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\](.*)")
         
         let stringLines = lrc.components(separatedBy: .newlines)
         for line in stringLines {

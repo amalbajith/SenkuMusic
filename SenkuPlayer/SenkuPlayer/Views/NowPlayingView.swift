@@ -227,20 +227,38 @@ struct NowPlayingView: View {
                         .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
                         .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
                 }
+                .buttonStyle(PressEffect(scale: 0.90))
                 .frame(maxWidth: .infinity)
+
                 
-                // Play/Pause
+                // Play/Pause (or Buffering for cloud songs)
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     player.togglePlayPause()
                 } label: {
-                    Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(ModernTheme.accentGradient)
-                        .shadow(color: ModernTheme.accentYellow.opacity(0.35), radius: 18, x: 0, y: 8)
+                    ZStack {
+                        if player.isBuffering {
+                            ZStack {
+                                Circle()
+                                    .fill(ModernTheme.accentYellow.opacity(0.15))
+                                    .frame(width: 80, height: 80)
+                                ProgressView()
+                                    .tint(ModernTheme.accentYellow)
+                                    .scaleEffect(1.8)
+                            }
+                        } else {
+                            Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 80))
+                                .foregroundStyle(ModernTheme.accentGradient)
+                                .shadow(color: ModernTheme.accentYellow.opacity(0.35), radius: 18, x: 0, y: 8)
+                        }
+                    }
+                    .frame(width: 80, height: 80)
                 }
+                .buttonStyle(PressEffect(scale: 0.88))
+                .disabled(player.isBuffering)
                 .frame(maxWidth: .infinity)
-                
+
                 // Next
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -248,14 +266,16 @@ struct NowPlayingView: View {
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title)
-                        .foregroundColor(ModernTheme.accentYellow)
+                        .foregroundColor(ModernTheme.textPrimary)
                         .frame(width: 60, height: 60)
                         .background(ModernTheme.backgroundSecondary.opacity(0.9), in: Circle())
                         .overlay { Circle().stroke(ModernTheme.borderSubtle, lineWidth: 1) }
                 }
+                .buttonStyle(PressEffect(scale: 0.90))
                 .frame(maxWidth: .infinity)
+
             }
-            
+
             HStack(spacing: 0) {
                 // Shuffle
                 Button {
@@ -267,9 +287,10 @@ struct NowPlayingView: View {
                         .frame(width: 50, height: 50)
                         .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
+                .buttonStyle(PressEffect(scale: 0.92))
                 .frame(maxWidth: .infinity)
-                
-                // Lyrics (Swapped from Favorite)
+
+                // Lyrics
                 Button {
                     showingLyrics = true
                 } label: {
@@ -279,9 +300,9 @@ struct NowPlayingView: View {
                         .frame(width: 50, height: 50)
                         .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
+                .buttonStyle(PressEffect(scale: 0.92))
                 .frame(maxWidth: .infinity)
-                
-                // Repeat
+
                 Button {
                     player.toggleRepeat()
                 } label: {
@@ -291,6 +312,7 @@ struct NowPlayingView: View {
                         .frame(width: 50, height: 50)
                         .background(ModernTheme.backgroundSecondary.opacity(0.7), in: Circle())
                 }
+                .buttonStyle(PressEffect(scale: 0.92))
                 .frame(maxWidth: .infinity)
             }
         }

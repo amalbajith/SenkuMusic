@@ -48,31 +48,7 @@ struct ArtistRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Artist Avatar
-            if let firstSong = artist.songs.first,
-               let artworkData = firstSong.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 50, height: 50)
-                    .overlay {
-                        Text(artist.name.prefix(1).uppercased())
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                    }
-            }
+            CachedArtworkView(song: artist.songs.first, size: 50, cornerRadius: 25)
             
             // Artist Info
             VStack(alignment: .leading, spacing: 4) {
@@ -106,33 +82,8 @@ struct ArtistDetailView: View {
                 // Header
                 VStack(spacing: 16) {
                     // Artist Avatar
-                    if let firstSong = artist.songs.first,
-                       let artworkData = firstSong.artworkData,
-                       let platformImage = PlatformImage.fromData(artworkData) {
-                        Image(platformImage: platformImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 120, height: 120)
-                            .clipShape(Circle())
-                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                    } else {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 120, height: 120)
-                            .overlay {
-                                Text(artist.name.prefix(1).uppercased())
-                                    .font(.system(size: 50))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            }
-                            .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                    }
+                    CachedArtworkView(song: artist.songs.first, size: 120, cornerRadius: 60)
+                        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     
                     // Artist Name
                     Text(artist.name)
@@ -223,31 +174,8 @@ struct ArtistAlbumItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
-            if let artworkData = album.displayArtworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(1, contentMode: .fill)
-                    .frame(width: 140, height: 140)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 140, height: 140)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 40))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            }
+            CachedArtworkView(song: album.songs.first, size: 140, cornerRadius: 12)
+                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             
             // Album Info
             Text(album.name.normalizedForDisplay)

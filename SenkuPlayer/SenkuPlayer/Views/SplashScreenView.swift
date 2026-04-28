@@ -287,7 +287,7 @@ struct OnboardingView: View {
             icon: "arrow.down.circle.fill",
             accent: Color(hue: 0.35, saturation: 0.8, brightness: 0.85),
             title: "Import\nAnything",
-            subtitle: "Drop in MP3, FLAC, M4A, WAV — even ZIP archives of albums. Artwork loads automatically.",
+            subtitle: "Drop in MP3, FLAC, M4A, WAV files. Artwork loads automatically.",
             visual: .import_
         )
     ]

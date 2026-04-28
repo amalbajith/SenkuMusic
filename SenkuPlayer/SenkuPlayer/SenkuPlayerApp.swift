@@ -17,6 +17,10 @@ struct SenkuPlayerApp: App {
                 // Main app — always loaded so audio engine initialises immediately
                 ContentView()
                     .opacity(splashDone && hasCompletedOnboarding ? 1 : 0)
+                    .onAppear {
+                        // Pre-test Piped instances in background so the first search is fast
+                        CloudDiscoveryService.shared.warmUpInBackground()
+                    }
 
                 // Splash
                 if !splashDone {

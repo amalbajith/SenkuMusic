@@ -28,10 +28,6 @@ class MusicLibraryManager: ObservableObject {
     }
     
     private init() {
-        if let data = userDefaults.data(forKey: playlistsKey),
-           let decoded = try? JSONDecoder().decode([Playlist].self, from: data) {
-            self.playlists = decoded
-        }
         loadSavedData()
     }
     
@@ -46,27 +42,16 @@ class MusicLibraryManager: ObservableObject {
         Task(priority: .background) { [weak self] in
             guard let self = self else { return }
             
-            // Separate zip files from audio files
+            // Collect audio files
             var audioURLs: [URL] = []
-            var zipURLs: [URL] = []
             
             for url in urls {
                 let ext = url.pathExtension.lowercased()
-                if ext == "zip" {
-                    zipURLs.append(url)
-                } else if Self.allowedAudioExtensions.contains(ext) {
+                if Self.allowedAudioExtensions.contains(ext) {
                     audioURLs.append(url)
                 }
             }
-            
-            // Extract audio files from zips
-            for zipURL in zipURLs {
-                let access = zipURL.startAccessingSecurityScopedResource()
-                defer { if access { zipURL.stopAccessingSecurityScopedResource() } }
-                
-                let extracted = self.extractAudioFromZip(zipURL)
-                audioURLs.append(contentsOf: extracted)
-            }
+
             
             // Now import all collected audio files
             var foundSongs: [Song] = []
@@ -126,6 +111,12 @@ class MusicLibraryManager: ObservableObject {
                 self.scanProgress = 0
             }
             
+            // Pre-process artwork thumbnails — runs once per song, skips if already on disk.
+            // After this, every list scroll is an instant disk/memory read with zero CPU decode.
+            Task.detached(priority: .background) {
+                await ArtworkCacheManager.shared.preprocessArtwork(for: foundSongs)
+            }
+
             // Automatically fetch metadata for songs without artwork
             await self.autoFetchMetadata(for: foundSongs)
             
@@ -142,59 +133,7 @@ class MusicLibraryManager: ObservableObject {
         }
     }
     
-    // MARK: - Zip Extraction
-    
-    /// Extracts audio files from a zip archive into a temporary directory.
-    /// Returns URLs of the extracted audio files.
-    private func extractAudioFromZip(_ zipURL: URL) -> [URL] {
-        let tempDir = fileManager.temporaryDirectory
-            .appendingPathComponent("SenkuZipExtract_\(UUID().uuidString)", isDirectory: true)
-        
-        defer {
-            // Cleanup temp directory after we're done
-            try? fileManager.removeItem(at: tempDir)
-        }
-        
-        do {
-            let extractedFiles = try ZipExtractor.extract(zipURL: zipURL, to: tempDir)
-            
-            // Filter to only audio files
-            let audioFiles = extractedFiles.filter {
-                Self.allowedAudioExtensions.contains($0.pathExtension.lowercased())
-            }
-            
-            // Copy audio files to Music directory so they persist after temp cleanup
-            let musicDir = getMusicDirectory()
-            var copiedURLs: [URL] = []
-            
-            for fileURL in audioFiles {
-                var destURL = musicDir.appendingPathComponent(fileURL.lastPathComponent)
-                if fileManager.fileExists(atPath: destURL.path) {
-                    let name = fileURL.deletingPathExtension().lastPathComponent
-                    let ext = fileURL.pathExtension
-                    var counter = 1
-                    while fileManager.fileExists(atPath: destURL.path) {
-                        destURL = musicDir.appendingPathComponent("\(name) \(counter).\(ext)")
-                        counter += 1
-                    }
-                }
-                try fileManager.copyItem(at: fileURL, to: destURL)
-                copiedURLs.append(destURL)
-            }
-            
-            #if DEBUG
-            print("📦 Extracted \(copiedURLs.count) audio files from zip")
-            #endif
-            return copiedURLs
-            
-        } catch {
-            #if DEBUG
-            print("❌ Zip extraction failed: \(error.localizedDescription)")
-            #endif
-            return []
-        }
-    }
-    
+
     // Helper to add song from a known URL (e.g. from Sync or Download)
     func addSongFromURL(_ url: URL) async {
         if let (song, artwork) = await Song.fromURL(url) {
@@ -569,39 +508,49 @@ class MusicLibraryManager: ObservableObject {
             }
         }
 
-        // Use dictionary for faster lookup during organization
+        // Use dictionary for faster O(N) grouping instead of O(N^2)
         var albumDict: [String: Album] = [:]
         var artistDict: [String: Artist] = [:]
         
         for song in songs {
-            // Album organization — songs with no album tag group by artist
-            let effectiveAlbum = song.album.isEmpty || song.album == "Unknown Album"
-                ? "Unknown Album"
-                : song.album
-            let albumArtist = song.album.isEmpty || song.album == "Unknown Album"
-                ? song.artist   // group by artist when no album tag
-                : song.artist
+            // Album organization
+            let effectiveAlbum = song.album.isEmpty || song.album == "Unknown Album" ? "Unknown Album" : song.album
+            let albumArtist = song.artist
             let albumKey = "\(effectiveAlbum)_\(albumArtist)"
-            if albumDict[albumKey] == nil {
-                albumDict[albumKey] = Album(name: effectiveAlbum, artist: albumArtist, songs: [], artworkData: nil)
+            
+            if var album = albumDict[albumKey] {
+                album.songs.append(song)
+                albumDict[albumKey] = album
+            } else {
+                albumDict[albumKey] = Album(name: effectiveAlbum, artist: albumArtist, songs: [song])
             }
-            albumDict[albumKey]?.songs.append(song)
             
             // Artist organization
-            if artistDict[song.artist] == nil {
-                artistDict[song.artist] = Artist(name: song.artist, songs: [])
+            if var artist = artistDict[song.artist] {
+                artist.songs.append(song)
+                artistDict[song.artist] = artist
+            } else {
+                artistDict[song.artist] = Artist(name: song.artist, songs: [song])
             }
-            artistDict[song.artist]?.songs.append(song)
         }
         
-        self.albums = Array(albumDict.values).sorted { $0.name < $1.name }
-        self.artists = Array(artistDict.values).sorted { $0.name < $1.name }
+        let sortedAlbums = Array(albumDict.values).sorted { $0.name < $1.name }
+        let sortedArtists = Array(artistDict.values).sorted { $0.name < $1.name }
         
-        // Link albums to artists
-        for i in artists.indices {
-            let name = artists[i].name
-            artists[i].albums = albums.filter { $0.artist == name }
+        // Link albums to artists via O(N) pass instead of O(N^2) filter
+        var artistAlbums: [String: [Album]] = [:]
+        for album in sortedAlbums {
+            artistAlbums[album.artist, default: []].append(album)
         }
+        
+        var finalArtists: [Artist] = []
+        for var artist in sortedArtists {
+            artist.albums = artistAlbums[artist.name] ?? []
+            finalArtists.append(artist)
+        }
+        
+        self.albums = sortedAlbums
+        self.artists = finalArtists
     }
     
     // MARK: - Persistence
@@ -643,7 +592,16 @@ class MusicLibraryManager: ObservableObject {
     
     func loadSavedData() {
         Task(priority: .userInitiated) {
-            guard let url = songsFileURL, let data = try? Data(contentsOf: url) else { return }
+            // Load Playlists
+            if let plistData = self.userDefaults.data(forKey: self.playlistsKey),
+               let decodedPlaylists = try? JSONDecoder().decode([Playlist].self, from: plistData) {
+                await MainActor.run {
+                    self.playlists = decodedPlaylists
+                }
+            }
+            
+            // Load Songs
+            guard let url = self.songsFileURL, let data = try? Data(contentsOf: url) else { return }
             if var decoded = try? JSONDecoder().decode([Song].self, from: data) {
                 
                 // Repair URLs for Sandbox Changes
@@ -674,7 +632,11 @@ class MusicLibraryManager: ObservableObject {
 
     private func performMaintenanceSweep() async {
         let allSongs = await MainActor.run { self.songs }
-        
+
+        // 0. Pre-process artwork thumbnails for any song not yet on disk.
+        //    Skips songs already cached — effectively a no-op after first run.
+        await MainActor.run { ArtworkCacheManager.shared.preprocessArtwork(for: allSongs) }
+
         // 1. Fetch missing artwork/metadata
         await autoFetchMetadata(for: allSongs)
         

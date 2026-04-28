@@ -31,20 +31,7 @@ struct MiniPlayerView: View {
                 // Main Pill Container
                 HStack(spacing: 12) {
                     // Artwork
-                    if let artworkData = song.artworkData,
-                       let platformImage = PlatformImage.fromData(artworkData) {
-                        Image(platformImage: platformImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 44, height: 44)
-                            .cornerRadius(8)
-                    } else {
-                        Rectangle()
-                            .fill(ModernTheme.mediumGray)
-                            .frame(width: 44, height: 44)
-                            .cornerRadius(8)
-                            .overlay(Image(systemName: "music.note").foregroundColor(.white.opacity(0.3)))
-                    }
+                    CachedArtworkView(song: song, size: 44, cornerRadius: 8)
                     
                     // Song Info
                     VStack(alignment: .leading, spacing: 1) {
@@ -70,19 +57,28 @@ struct MiniPlayerView: View {
                     
                     Spacer()
                     
-                    // Play/Pause
+                    // Play/Pause (or Buffering spinner for cloud songs)
                     Button {
                         player.togglePlayPause()
                     } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(ModernTheme.pureBlack)
-                            .frame(width: 34, height: 34)
-                            .background(ModernTheme.accentGradient, in: Circle())
-                            .overlay {
-                                Circle().stroke(ModernTheme.borderStrong, lineWidth: 1)
+                        ZStack {
+                            Circle()
+                                .fill(ModernTheme.accentGradient)
+                                .frame(width: 34, height: 34)
+                                .overlay { Circle().stroke(ModernTheme.borderStrong, lineWidth: 1) }
+                            
+                            if player.isBuffering {
+                                ProgressView()
+                                    .tint(ModernTheme.pureBlack)
+                                    .scaleEffect(0.75)
+                            } else {
+                                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundColor(ModernTheme.pureBlack)
                             }
+                        }
                     }
+                    .disabled(player.isBuffering)
                     .padding(.trailing, ModernTheme.miniPadding)
                     
                     // Next

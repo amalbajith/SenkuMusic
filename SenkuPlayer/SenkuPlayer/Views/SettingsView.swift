@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage("gaplessPlayback")   private var gaplessPlayback: Bool     = true
     @AppStorage("performanceProfile") private var performanceProfile: PerformanceProfile = .balanced
     @AppStorage("volumeNormalization") private var volumeNormalization: Bool = true
+    @AppStorage("autoPlayOnBluetooth") private var autoPlayOnBluetooth: Bool = false
+    @AppStorage("bluetoothCarName") private var bluetoothCarName: String = ""
 
     @AppStorage("devBypassArtworkCache")   private var devBypassArtworkCache   = false
     @AppStorage("devSimulateNetworkDelay") private var devSimulateNetworkDelay = false
@@ -127,58 +129,53 @@ struct SettingsView: View {
                             .padding(.vertical, 14)
                         }
 
-                        // Backup & Restore
-                        group(title: "Backup & Restore") {
-                            Button {
-                                exportBackup()
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "arrow.up.doc.fill")
-                                        .font(.system(size: 15))
-                                        .foregroundColor(ModernTheme.accentYellow)
-                                        .frame(width: 24)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Export Library")
-                                            .font(ModernTheme.body())
-                                            .foregroundColor(ModernTheme.textPrimary)
-                                        Text("Save .senkubackup to Files")
-                                            .font(ModernTheme.caption())
+                        // Connectivity
+                        group(title: "Connectivity") {
+                            VStack(alignment: .leading, spacing: 4) {
+                                toggleRow(icon: "car.fill", label: "Auto-Play on Bluetooth", binding: $autoPlayOnBluetooth)
+
+                                if autoPlayOnBluetooth {
+                                    Divider()
+                                        .background(ModernTheme.borderSubtle)
+                                        .padding(.leading, 52)
+
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "antenna.radiowaves.left.and.right")
+                                            .font(.system(size: 15))
                                             .foregroundColor(ModernTheme.textSecondary)
+                                            .frame(width: 24)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Device Name")
+                                                .font(ModernTheme.body())
+                                                .foregroundColor(ModernTheme.textPrimary)
+                                            TextField("e.g. xav-w650bt (leave blank for any)", text: $bluetoothCarName)
+                                                .font(ModernTheme.caption())
+                                                .foregroundColor(ModernTheme.textSecondary)
+                                                .autocorrectionDisabled()
+                                                .textInputAutocapitalization(.never)
+                                                .submitLabel(.done)
+                                        }
                                     }
-                                    Spacer()
-                                    if isExporting {
-                                        ProgressView().tint(ModernTheme.accentYellow)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
-                            }
-                            .disabled(isExporting || library.songs.isEmpty)
-                            
-                            rowDivider()
-                            
-                            Button {
-                                showingRestorePicker = true
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "arrow.down.doc.fill")
-                                        .font(.system(size: 15))
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+
+                                    Text(bluetoothCarName.isEmpty
+                                         ? "Will auto-play when any Bluetooth audio device connects."
+                                         : "Will only auto-play when \"\(bluetoothCarName)\" connects.")
+                                        .font(ModernTheme.caption())
                                         .foregroundColor(ModernTheme.textSecondary)
-                                        .frame(width: 24)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Restore Library")
-                                            .font(ModernTheme.body())
-                                            .foregroundColor(ModernTheme.textPrimary)
-                                        Text("Import a .senkubackup file")
-                                            .font(ModernTheme.caption())
-                                            .foregroundColor(ModernTheme.textSecondary)
-                                    }
-                                    Spacer()
+                                        .padding(.horizontal, 16)
+                                        .padding(.bottom, 10)
+                                } else {
+                                    Text("Automatically starts playing when your car stereo connects. No Shortcuts needed.")
+                                        .font(ModernTheme.caption())
+                                        .foregroundColor(ModernTheme.textSecondary)
+                                        .padding(.horizontal, 16)
+                                        .padding(.bottom, 10)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
                             }
                         }
+
 
                         // Library actions
                         group(title: "Library") {
@@ -268,32 +265,8 @@ struct SettingsView: View {
                 ShareSheet(items: [url])
             }
         }
-        .sheet(isPresented: $showingRestorePicker) {
-            BackupRestorePickerView { url in
-                Task {
-                    try? await BackupManager.shared.restoreBackup(from: url)
-                }
-            }
-        }
+
         .preferredColorScheme(.dark)
-    }
-    
-    // MARK: - Backup Helpers
-    private func exportBackup() {
-        isExporting = true
-        Task.detached(priority: .userInitiated) {
-            do {
-                let url = try await BackupManager.shared.createBackup()
-                await MainActor.run {
-                    exportURL = url
-                    isExporting = false
-                    showingShareSheet = true
-                }
-            } catch {
-                await MainActor.run { isExporting = false }
-                print("❌ Backup failed: \(error)")
-            }
-        }
     }
 
 

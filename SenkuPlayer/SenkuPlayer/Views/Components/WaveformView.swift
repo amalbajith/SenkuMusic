@@ -30,7 +30,7 @@ struct WaveformView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            TimelineView(.animation(minimumInterval: 1/60, paused: !isPlaying)) { timeline in
+            TimelineView(.animation(minimumInterval: 1/120, paused: !isPlaying)) { timeline in
                 Canvas { context, size in
                     let time = timeline.date.timeIntervalSinceReferenceDate
                     let phase = isPlaying ? time * 2.5 : 0

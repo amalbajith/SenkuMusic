@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 class ArtworkManager {
     static let shared = ArtworkManager()
     

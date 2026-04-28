@@ -14,7 +14,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     let onSelect: ([URL]) -> Void
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .mp3, .zip], asCopy: false)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.audio, .mp3], asCopy: false)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = true
         picker.shouldShowFileExtensions = true

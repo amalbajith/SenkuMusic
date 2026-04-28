@@ -9,11 +9,12 @@ import SwiftUI
 
 struct PlaylistsListView: View {
     @StateObject private var library = MusicLibraryManager.shared
-    @StateObject private var player = AudioPlayerManager.shared
     let searchText: String
     @State private var showingCreatePlaylist = false
     @State private var showingSpotifyImport = false
     @State private var newPlaylistName = ""
+    // PERF: Only re-render when song presence changes, not on every 100ms timer tick
+    @State private var hasSong: Bool = AudioPlayerManager.shared.currentSong != nil
     
     private var filteredPlaylists: [Playlist] {
         if searchText.isEmpty {
@@ -59,7 +60,7 @@ struct PlaylistsListView: View {
                     }
                     .listStyle(.plain)
                     .safeAreaInset(edge: .bottom) {
-                        Color.clear.frame(height: player.currentSong != nil ? 80 : 0)
+                        Color.clear.frame(height: hasSong ? 80 : 0)
                     }
                 }
             }
@@ -89,6 +90,9 @@ struct PlaylistsListView: View {
                 SpotifyImportView()
             }
             .preferredColorScheme(.dark)
+            .onReceive(AudioPlayerManager.shared.$currentSong) { song in
+                hasSong = song != nil
+            }
         }
     }
     
@@ -114,20 +118,7 @@ struct CreatePlaylistSheet: View {
         NavigationStack {
             VStack(spacing: 32) {
                 // Artwork preview
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 160, height: 160)
-                    .overlay {
-                        Image(systemName: "music.note.list")
-                            .font(.system(size: 50))
-                            .foregroundColor(ModernTheme.textTertiary)
-                    }
+                CachedArtworkView(song: nil, size: 160, cornerRadius: 16)
                     .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
                 
                 // Name field
@@ -207,23 +198,13 @@ struct FavoritesRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                if let song = songs.first, 
-                   let artworkData = song.artworkData, 
-                   let platformImage = PlatformImage.fromData(artworkData) {
-                    Image(platformImage: platformImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 60, height: 60)
-                        .cornerRadius(8)
-                        .overlay {
+                CachedArtworkView(song: songs.first, size: 60, cornerRadius: 8)
+                    .overlay {
+                        if !songs.isEmpty {
                             Color.black.opacity(0.3)
                                 .cornerRadius(8)
                         }
-                } else {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(ModernTheme.mediumGray)
-                        .frame(width: 60, height: 60)
-                }
+                    }
                 
                 Image(systemName: "heart.fill")
                     .foregroundColor(.white)
@@ -259,21 +240,8 @@ struct FavoritesDetailView: View {
         VStack(spacing: 0) {
             VStack(spacing: 16) {
                 ZStack {
-                     if let song = songs.first, 
-                        let artworkData = song.artworkData, 
-                        let platformImage = PlatformImage.fromData(artworkData) {
-                          Image(platformImage: platformImage)
-                               .resizable()
-                               .aspectRatio(contentMode: .fill)
-                               .frame(width: 200, height: 200)
-                               .cornerRadius(16)
-                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                     } else {
-                          RoundedRectangle(cornerRadius: 16)
-                               .fill(ModernTheme.mediumGray)
-                               .frame(width: 200, height: 200)
-                               .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
-                     }
+                     CachedArtworkView(song: songs.first, size: 200, cornerRadius: 16)
+                          .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
                     
                     Image(systemName: "heart.fill")
                         .font(.system(size: 60))
@@ -418,29 +386,11 @@ struct PlaylistArtwork: View {
         }
     }
     
+    
     private func singleArtwork(_ song: Song) -> some View {
-        Group {
-            if let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .foregroundColor(.white)
-                    }
-            }
-        }
+        CachedArtworkView(song: song, size: 100, cornerRadius: 8)
     }
+
     
     private var gridArtwork: some View {
         GeometryReader { geometry in
@@ -460,21 +410,8 @@ struct PlaylistArtwork: View {
     }
     
     private func artworkTile(for song: Song?, size: CGFloat) -> some View {
-        Group {
-            if let song = song,
-               let artworkData = song.artworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipped()
-            } else {
-                Rectangle()
-                    .fill(ModernTheme.backgroundSecondary)
-                    .frame(width: size, height: size)
-            }
-        }
+        CachedArtworkView(song: song, size: size, cornerRadius: 0)
+            .frame(width: size, height: size)
     }
 }
 
@@ -662,24 +599,7 @@ struct AddSongsToPlaylistView: View {
                             } label: {
                                 HStack(spacing: 12) {
                                     // Artwork
-                                    Group {
-                                        if let artworkData = song.artworkData,
-                                           let platformImage = PlatformImage.fromData(artworkData) {
-                                            Image(platformImage: platformImage)
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                        } else {
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(ModernTheme.mediumGray)
-                                                .overlay {
-                                                    Image(systemName: "music.note")
-                                                        .foregroundColor(ModernTheme.textTertiary)
-                                                        .font(.caption)
-                                                }
-                                        }
-                                    }
-                                    .frame(width: 44, height: 44)
-                                    .cornerRadius(6)
+                                    CachedArtworkView(song: song, size: 44, cornerRadius: 6)
                                     
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(song.title)

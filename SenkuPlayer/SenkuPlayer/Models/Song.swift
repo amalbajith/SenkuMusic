@@ -22,6 +22,11 @@ struct Song: Identifiable, Codable, Equatable {
     var plainLyrics: String?
     var syncedLyrics: String?
     
+    // Remote Streaming Support
+    var isRemote: Bool = false
+    var streamURL: URL?
+    var thumbnailURL: URL?
+    
     // Playback Stats
     var lastPlayedDate: Date?
     var playCount: Int = 0
@@ -30,14 +35,11 @@ struct Song: Identifiable, Codable, Equatable {
     // Instead, views can fetch it from ArtworkManager or MusicLibraryManager
     var hasArtwork: Bool = false
     
-    // In-memory artwork cache for currently playing or visible songs (Managed externally)
-    // Coding/Decoding will ignore artworkData if we use CodingKeys
-    
     enum CodingKeys: String, CodingKey {
-        case id, url, title, artist, album, albumArtist, duration, genre, year, trackNumber, discNumber, energy, plainLyrics, syncedLyrics, hasArtwork, lastPlayedDate, playCount
+        case id, url, title, artist, album, albumArtist, duration, genre, year, trackNumber, discNumber, energy, plainLyrics, syncedLyrics, isRemote, streamURL, thumbnailURL, hasArtwork, lastPlayedDate, playCount
     }
     
-    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil, energy: Float? = nil, plainLyrics: String? = nil, syncedLyrics: String? = nil, hasArtwork: Bool = false, lastPlayedDate: Date? = nil, playCount: Int = 0) {
+    init(id: UUID = UUID(), url: URL, title: String, artist: String, album: String, albumArtist: String? = nil, duration: TimeInterval, genre: String? = nil, year: Int? = nil, trackNumber: Int? = nil, discNumber: Int? = nil, energy: Float? = nil, plainLyrics: String? = nil, syncedLyrics: String? = nil, isRemote: Bool = false, streamURL: URL? = nil, thumbnailURL: URL? = nil, hasArtwork: Bool = false, lastPlayedDate: Date? = nil, playCount: Int = 0) {
         self.id = id
         self.url = url
         self.title = title
@@ -52,19 +54,47 @@ struct Song: Identifiable, Codable, Equatable {
         self.energy = energy
         self.plainLyrics = plainLyrics
         self.syncedLyrics = syncedLyrics
+        self.isRemote = isRemote
+        self.streamURL = streamURL
+        self.thumbnailURL = thumbnailURL
         self.hasArtwork = hasArtwork
         self.lastPlayedDate = lastPlayedDate
         self.playCount = playCount
+    }
+    
+    // ── SAFE DECODING FOR OLD DATA ────────────────────────
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        url = try container.decode(URL.self, forKey: .url)
+        title = try container.decode(String.self, forKey: .title)
+        artist = try container.decode(String.self, forKey: .artist)
+        album = try container.decode(String.self, forKey: .album)
+        albumArtist = try container.decodeIfPresent(String.self, forKey: .albumArtist)
+        duration = try container.decode(TimeInterval.self, forKey: .duration)
+        genre = try container.decodeIfPresent(String.self, forKey: .genre)
+        year = try container.decodeIfPresent(Int.self, forKey: .year)
+        trackNumber = try container.decodeIfPresent(Int.self, forKey: .trackNumber)
+        discNumber = try container.decodeIfPresent(Int.self, forKey: .discNumber)
+        energy = try container.decodeIfPresent(Float.self, forKey: .energy)
+        plainLyrics = try container.decodeIfPresent(String.self, forKey: .plainLyrics)
+        syncedLyrics = try container.decodeIfPresent(String.self, forKey: .syncedLyrics)
+        
+        // New fields — use decodeIfPresent to avoid crashing on old data
+        isRemote = try container.decodeIfPresent(Bool.self, forKey: .isRemote) ?? false
+        streamURL = try container.decodeIfPresent(URL.self, forKey: .streamURL)
+        thumbnailURL = try container.decodeIfPresent(URL.self, forKey: .thumbnailURL)
+        
+        hasArtwork = try container.decode(Bool.self, forKey: .hasArtwork)
+        lastPlayedDate = try container.decodeIfPresent(Date.self, forKey: .lastPlayedDate)
+        playCount = try container.decode(Int.self, forKey: .playCount)
     }
     
     static func == (lhs: Song, rhs: Song) -> Bool {
         lhs.id == rhs.id
     }
     
-    /// Helper to get cached artwork data
-    var artworkData: Data? {
-        return ArtworkManager.shared.getArtwork(for: self.id)
-    }
+
 }
 
 // MARK: - Metadata Extraction

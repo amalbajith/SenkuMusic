@@ -51,30 +51,8 @@ struct AlbumGridItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Artwork
-            if let artworkData = album.displayArtworkData,
-               let platformImage = PlatformImage.fromData(artworkData) {
-                Image(platformImage: platformImage)
-                    .resizable()
-                    .aspectRatio(1, contentMode: .fill)
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        LinearGradient(
-                            colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .aspectRatio(1, contentMode: .fill)
-                    .overlay {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 40))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-            }
+            CachedArtworkView(song: album.songs.first, size: 160, cornerRadius: 12)
+                .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
             
             // Album Info
             Text(album.name.normalizedForDisplay)
@@ -102,31 +80,8 @@ struct AlbumDetailView: View {
                 // Header
                 VStack(spacing: 16) {
                     // Artwork
-                    if let artworkData = album.displayArtworkData,
-                       let platformImage = PlatformImage.fromData(artworkData) {
-                        Image(platformImage: platformImage)
-                            .resizable()
-                            .aspectRatio(1, contentMode: .fill)
-                            .frame(width: 200, height: 200)
-                            .cornerRadius(16)
-                            .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
-                    } else {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(
-                                LinearGradient(
-                                    colors: [ModernTheme.mediumGray, ModernTheme.darkGray],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 200, height: 200)
-                            .overlay {
-                                Image(systemName: "music.note")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                            .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
-                    }
+                    CachedArtworkView(song: album.songs.first, size: 200, cornerRadius: 16)
+                        .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 5)
                     
                     // Album Info
                     VStack(spacing: 4) {

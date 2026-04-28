@@ -2,12 +2,56 @@
 //  LyricsView.swift
 //  SenkuPlayer
 //
-//  Premium Apple Music-style synced lyrics with optimized time tracking.
+//  Premium Apple Music-style synced lyrics.
+//
+//  PERF notes:
+//  - @ObservedObject player removed: body now re-renders only when activeIndex changes
+//    (lyric line transition, ~once per second) not every 100ms timer tick.
+//  - .blur removed from non-active lines: each blur forces an offscreen GPU pass.
+//    With 8-10 visible lines that was 8-10 extra compositing layers per frame.
 //
 
 import SwiftUI
 
-// MARK: - Active Line Index computation is separated so ForEach doesn't recompute it per-cell
+// MARK: - Lyric Line View
+
+private struct LyricLineView: View {
+    let text: String
+    let isActive: Bool
+    let isPast: Bool
+
+    // Adaptive font size — longer lines get smaller text so they wrap gracefully
+    private var fontSize: CGFloat {
+        let len = text.count
+        if len < 35  { return 22 }
+        if len < 60  { return 18 }
+        if len < 90  { return 15 }
+        return 13
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: fontSize, weight: .bold, design: .rounded))
+            .foregroundColor(
+                isActive ? .white :
+                isPast   ? .white.opacity(0.28) :
+                           .white.opacity(0.42)
+            )
+            .scaleEffect(isActive ? 1.06 : 1.0, anchor: .leading)
+            .lineLimit(3)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 14)
+            .animation(.spring(response: 0.45, dampingFraction: 0.82), value: isActive)
+            .animation(.easeInOut(duration: 0.2), value: isPast)
+    }
+}
+
+// MARK: - Lyrics Content
+
+// Separated struct: ForEach only re-evaluates when activeIndex or parsedLines change,
+// not on every parent body re-render.
 private struct LyricsContent: View {
     let parsedLines: [LyricLine]
     let activeIndex: Int?
@@ -17,12 +61,11 @@ private struct LyricsContent: View {
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
-            // Top spacer so first line starts in the middle of the screen
-            Color.clear.frame(height: geometry.size.height * 0.38)
+            Color.clear.frame(height: geometry.size.height * 0.18)
 
             ForEach(Array(parsedLines.enumerated()), id: \.element.id) { index, line in
                 let isActive = index == activeIndex
-                let isPast = activeIndex.map { index < $0 } ?? false
+                let isPast   = activeIndex.map { index < $0 } ?? false
 
                 LyricLineView(
                     text: line.text.isEmpty ? "♪" : line.text,
@@ -33,68 +76,44 @@ private struct LyricsContent: View {
                 .onTapGesture { onTap(line, syncOffset) }
             }
 
-            // Bottom breathing room
             Color.clear.frame(height: geometry.size.height * 0.45)
         }
-    }
-}
-
-private struct LyricLineView: View {
-    let text: String
-    let isActive: Bool
-    let isPast: Bool
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 22, weight: .bold, design: .rounded))
-            .foregroundColor(
-                isActive ? .white :
-                isPast  ? .white.opacity(0.3) :
-                           .white.opacity(0.5)
-            )
-            .blur(radius: isActive ? 0 : 0.8)
-            .scaleEffect(isActive ? 1.18 : 1.0, anchor: .leading)
-            .minimumScaleFactor(0.7)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 14)
-            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: isActive)
-            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: isPast)
     }
 }
 
 // MARK: - Main View
 
 struct LyricsView: View {
-    @ObservedObject var player = AudioPlayerManager.shared
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
+
+    // PERF: No @ObservedObject player — body re-renders only when these @State values change.
+    // currentTime arrives via onReceive but only triggers a body re-render when activeIndex
+    // actually changes (i.e. when a new lyric line starts), not every 100ms.
+    @State private var songTitle: String   = AudioPlayerManager.shared.currentSong?.title ?? ""
+    @State private var plainLyrics: String? = AudioPlayerManager.shared.currentSong?.plainLyrics
 
     @State private var parsedLines: [LyricLine] = []
-    @State private var activeIndex: Int? = nil
-    @State private var isFetchingLyrics = false
-    @State private var fetchFailed = false
-    @State private var showingEditor = false
+    @State private var activeIndex: Int?    = nil
+    @State private var isFetchingLyrics     = false
+    @State private var fetchFailed          = false
+    @State private var showingEditor        = false
     @State private var syncOffset: TimeInterval = 0.0
-
-    // Artwork dominant color for the background tint
     @State private var backdropColor: Color = ModernTheme.backgroundPrimary
 
     var body: some View {
         ZStack(alignment: .top) {
-            // ── Background ────────────────────────────────────
+
+            // ── Background ──────────────────────────────────────
             ZStack {
-                backdropColor
-                    .ignoresSafeArea()
+                backdropColor.ignoresSafeArea()
                 LinearGradient(
                     colors: [backdropColor.opacity(0.6), Color.black.opacity(0.92)],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    startPoint: .top, endPoint: .bottom
                 )
                 .ignoresSafeArea()
             }
 
-            // ── Lyrics Body ───────────────────────────────────
+            // ── Lyrics Body ─────────────────────────────────────
             GeometryReader { geometry in
                 if !parsedLines.isEmpty {
                     ScrollViewReader { proxy in
@@ -105,11 +124,11 @@ struct LyricsView: View {
                                 geometry: geometry,
                                 syncOffset: syncOffset,
                                 onTap: { line, offset in
-                                    player.seek(to: max(0, line.time - offset))
+                                    AudioPlayerManager.shared.seek(to: max(0, line.time - offset))
                                 }
                             )
                         }
-                        // Sync scroll to active line with a slight debounce
+                        .clipped()
                         .onChange(of: activeIndex) { _, newIndex in
                             guard let idx = newIndex, idx < parsedLines.count else { return }
                             withAnimation(.interpolatingSpring(stiffness: 40, damping: 10)) {
@@ -118,7 +137,6 @@ struct LyricsView: View {
                         }
                     }
                     .mask(
-                        // Fade out top & bottom edges
                         LinearGradient(
                             stops: [
                                 .init(color: .clear, location: 0),
@@ -126,13 +144,11 @@ struct LyricsView: View {
                                 .init(color: .black, location: 0.82),
                                 .init(color: .clear, location: 1)
                             ],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            startPoint: .top, endPoint: .bottom
                         )
                     )
 
-                } else if let plain = player.currentSong?.plainLyrics {
-                    // Plain text fallback
+                } else if let plain = plainLyrics {
                     ScrollView(showsIndicators: false) {
                         Text(plain)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -144,7 +160,6 @@ struct LyricsView: View {
                             .padding(.bottom, 120)
                     }
                 } else {
-                    // Loading / not found state
                     VStack(spacing: 20) {
                         Spacer()
                         if isFetchingLyrics {
@@ -171,33 +186,37 @@ struct LyricsView: View {
                 }
             }
 
-
-            // ── Header Overlay ────────────────────────────────
+            // ── Header ──────────────────────────────────────────
             headerBar
         }
         .onAppear {
             parseLyrics()
-            updateActiveIndex()
+            updateActiveIndex(for: AudioPlayerManager.shared.currentTime)
             extractBackdropColor()
             fetchLyricsIfNeeded()
         }
-        .onChange(of: player.currentSong?.id) { _, _ in
-            dismiss()
-        }
-        .onChange(of: player.isPlaying) { _, isPlaying in
-            if !isPlaying && player.currentTime == 0 {
-                dismiss() // Auto-dismiss when queue finishes
+        // Song change → dismiss (rare, cheap)
+        .onReceive(AudioPlayerManager.shared.$currentSong) { song in
+            let newId = song?.id
+            if newId != AudioPlayerManager.shared.currentSong?.id {
+                dismiss()
+            } else {
+                // Same song but lyrics may have been fetched
+                songTitle   = song?.title ?? ""
+                plainLyrics = song?.plainLyrics
+                parseLyrics()
             }
         }
-        .onChange(of: player.currentSong?.syncedLyrics) { _, _ in
-            parseLyrics()
+        // Playback stop → dismiss
+        .onReceive(AudioPlayerManager.shared.$isPlaying) { isPlaying in
+            if !isPlaying && AudioPlayerManager.shared.currentTime == 0 { dismiss() }
         }
-        // High-frequency time observation
-        .onChange(of: player.currentTime) { _, _ in
-            updateActiveIndex()
+        // HIGH FREQUENCY: fires every 100ms but only writes @State when index changes
+        .onReceive(AudioPlayerManager.shared.$currentTime) { time in
+            updateActiveIndex(for: time)
         }
         .sheet(isPresented: $showingEditor) {
-            if let song = player.currentSong {
+            if let song = AudioPlayerManager.shared.currentSong {
                 LyricEditorView(song: song)
             }
         }
@@ -216,6 +235,7 @@ struct LyricsView: View {
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
+                .buttonStyle(PressEffect(scale: 0.90))
 
                 Spacer()
 
@@ -224,7 +244,7 @@ struct LyricsView: View {
                         .font(.system(size: 11, weight: .black))
                         .kerning(3)
                         .foregroundColor(.white.opacity(0.5))
-                    Text((player.currentSong?.title ?? "").normalizedForDisplay)
+                    Text(songTitle.normalizedForDisplay)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
@@ -232,7 +252,6 @@ struct LyricsView: View {
 
                 Spacer()
 
-                // Mirrored spacer to keep title centered
                 Color.clear.frame(width: 38, height: 38)
             }
             .padding(.horizontal, 20)
@@ -241,56 +260,46 @@ struct LyricsView: View {
             .background(
                 LinearGradient(
                     colors: [backdropColor.opacity(0.9), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    startPoint: .top, endPoint: .bottom
                 )
                 .ignoresSafeArea()
             )
-            
         }
     }
 
     // MARK: - Logic
 
     private func parseLyrics() {
-        if let synced = player.currentSong?.syncedLyrics, !synced.isEmpty {
+        if let synced = AudioPlayerManager.shared.currentSong?.syncedLyrics, !synced.isEmpty {
             parsedLines = LRCParser.parse(lrc: synced)
         } else {
             parsedLines = []
         }
-        updateActiveIndex()
+        updateActiveIndex(for: AudioPlayerManager.shared.currentTime)
     }
 
-    /// Binary search for the active lyric line – O(log n), safe to call every timer tick
-    private func updateActiveIndex() {
-        guard !parsedLines.isEmpty else {
-            activeIndex = nil
-            return
-        }
+    /// O(log n) binary search — fast enough to call on every timer tick.
+    /// Only writes @State when the index actually changes → no spurious re-renders.
+    private func updateActiveIndex(for currentTime: TimeInterval) {
+        guard !parsedLines.isEmpty else { activeIndex = nil; return }
 
-        // Apply manual sync offset
-        let time = player.currentTime + syncOffset
-        var lo = 0
-        var hi = parsedLines.count - 1
-        var result = 0
+        let time = currentTime + syncOffset
+        var lo = 0, hi = parsedLines.count - 1, result = 0
 
         while lo <= hi {
             let mid = (lo + hi) / 2
             if parsedLines[mid].time <= time {
-                result = mid
-                lo = mid + 1
+                result = mid; lo = mid + 1
             } else {
                 hi = mid - 1
             }
         }
 
-        if activeIndex != result {
-            activeIndex = result
-        }
+        if activeIndex != result { activeIndex = result }
     }
 
     private func fetchLyricsIfNeeded() {
-        guard let song = player.currentSong,
+        guard let song = AudioPlayerManager.shared.currentSong,
               song.syncedLyrics == nil, song.plainLyrics == nil else { return }
         isFetchingLyrics = true
         fetchFailed = false
@@ -298,9 +307,10 @@ struct LyricsView: View {
             await MusicLibraryManager.shared.fetchLyricsIfNeeded(for: song)
             await MainActor.run {
                 isFetchingLyrics = false
+                plainLyrics = AudioPlayerManager.shared.currentSong?.plainLyrics
                 parseLyrics()
-                // If still no lyrics after fetch, mark as failed
-                if player.currentSong?.plainLyrics == nil && player.currentSong?.syncedLyrics == nil {
+                if AudioPlayerManager.shared.currentSong?.plainLyrics == nil &&
+                   AudioPlayerManager.shared.currentSong?.syncedLyrics == nil {
                     fetchFailed = true
                 }
             }
@@ -308,18 +318,15 @@ struct LyricsView: View {
     }
 
     private func extractBackdropColor() {
-        guard let song = player.currentSong else {
+        guard let song = AudioPlayerManager.shared.currentSong else {
             backdropColor = ModernTheme.backgroundPrimary
             return
         }
         Task.detached(priority: .userInitiated) {
             let color = await DominantColorExtractor.shared.extractDominantColor(for: song)
             await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    self.backdropColor = color
-                }
+                withAnimation(.easeInOut(duration: 0.6)) { self.backdropColor = color }
             }
         }
     }
 }
-
